@@ -1,10 +1,8 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +12,7 @@ import {
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
@@ -32,6 +31,7 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<{ albums: number; photosShared: number } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -44,8 +44,6 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
-
   const showToast = (text: string) => {
     setToast(text);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -56,39 +54,24 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       {/* Pas de KeyboardAvoidingView : la liste ajuste elle-même ses insets au clavier. */}
       <View style={styles.container}>
+        <ScreenHeader left={<BackButton />} scrolled={scrolled} />
         <ScrollView
-          contentInsetAdjustmentBehavior="automatic"
+          contentInsetAdjustmentBehavior="never"
           // iOS : la liste réserve la hauteur du clavier et fait défiler le champ focalisé
           // au-dessus, en gardant le clavier ouvert quand on scrolle.
           automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="none"
+          onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > HEADER_SCROLL_THRESHOLD)}
+          scrollEventThrottle={16}
           contentContainerStyle={[
             styles.content,
             {
-              paddingTop: Platform.OS === 'ios' ? 0 : insets.top,
+              paddingTop: Spacing.two,
               // Marge sous le dernier élément : le champ focalisé ne colle pas au clavier.
               paddingBottom: insets.bottom + Spacing.six + Spacing.four,
             },
           ]}>
-          <View style={styles.brandRow}>
-            <Pressable
-              accessibilityLabel="Retour"
-              accessibilityRole="button"
-              onPress={back}
-              hitSlop={8}
-              style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}>
-              <SymbolView
-                name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-                size={18}
-                weight="heavy"
-                tintColor={Palette.text}
-                fallback={<Text style={styles.roundButtonFallback}>‹</Text>}
-              />
-            </Pressable>
-            <Text style={styles.brand}>Synkup</Text>
-          </View>
-
           <View style={styles.titleBlock}>
             <Text style={styles.title}>Mon profil</Text>
             <Text style={styles.subtitle}>C&apos;est toi que tes amis verront dans les albums</Text>
@@ -290,34 +273,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     gap: Spacing.four,
   },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingTop: Spacing.two,
-  },
-  roundButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radii.pill,
-    backgroundColor: Palette.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  roundButtonFallback: {
-    color: Palette.text,
-    fontSize: 22,
-    fontWeight: '900',
-    lineHeight: 24,
-  },
-  brand: {
-    flex: 1,
-    color: Palette.pink,
-    fontFamily: Fonts.rounded,
-    fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
   pressed: {
     opacity: 0.8,
     transform: [{ scale: 0.96 }],
@@ -325,7 +280,6 @@ const styles = StyleSheet.create({
   titleBlock: {
     alignItems: 'center',
     gap: Spacing.half,
-    marginTop: -Spacing.two,
   },
   title: {
     color: Palette.text,

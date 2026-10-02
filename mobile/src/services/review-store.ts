@@ -5,12 +5,15 @@
  */
 import Storage from 'expo-sqlite/kv-store';
 
+import { getCurrentUserId } from '@/services/auth-api';
+
 import type { ReviewDecision } from '@/types/album';
 
 type ReviewMap = Record<string, ReviewDecision>;
 
 function storageKey(albumId: string) {
-  return `reviews:${albumId}`;
+  // Préfixé par l'utilisateur : deux comptes sur le même téléphone ne se mélangent pas.
+  return `reviews:${getCurrentUserId()}:${albumId}`;
 }
 
 export function getReviews(albumId: string): ReviewMap {

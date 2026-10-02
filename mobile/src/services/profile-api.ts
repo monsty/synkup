@@ -4,6 +4,8 @@
  */
 import Storage from 'expo-sqlite/kv-store';
 
+import { getCurrentUser, getCurrentUserId } from '@/services/auth-api';
+
 export type Profile = {
   nickname: string;
   email: string;
@@ -12,26 +14,37 @@ export type Profile = {
   memberSince: string;
 };
 
-const STORAGE_KEY = 'profile';
 const NETWORK_DELAY_MS = 350;
 
-const DEFAULT_PROFILE: Profile = {
-  nickname: 'Antoine',
-  email: 'antoine@example.com',
-  avatarUri: 'https://i.pravatar.cc/240?img=12',
-  memberSince: '2026-09-01T10:00:00.000Z',
-};
+function storageKey() {
+  return `profile:${getCurrentUserId()}`;
+}
+
+/** Profil initial d'un compte : surnom déduit de l'email, avatar pour les comptes de démo. */
+function defaultProfile(): Profile {
+  const user = getCurrentUser();
+  const email = user?.email ?? '';
+  const local = email.split('@')[0] ?? '';
+  const nickname = local ? local.charAt(0).toUpperCase() + local.slice(1) : 'Moi';
+  return {
+    nickname,
+    email,
+    avatarUri: user && user.provider !== 'email' ? 'https://i.pravatar.cc/240?img=12' : null,
+    memberSince: new Date().toISOString(),
+  };
+}
 
 function delay(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 function read(): Profile {
+  const fallback = defaultProfile();
   try {
-    const raw = Storage.getItemSync(STORAGE_KEY);
-    return raw ? { ...DEFAULT_PROFILE, ...(JSON.parse(raw) as Partial<Profile>) } : DEFAULT_PROFILE;
+    const raw = Storage.getItemSync(storageKey());
+    return raw ? { ...fallback, ...(JSON.parse(raw) as Partial<Profile>) } : fallback;
   } catch {
-    return DEFAULT_PROFILE;
+    return fallback;
   }
 }
 
@@ -46,7 +59,7 @@ export const profileApi = {
   async updateProfile(update: ProfileUpdate): Promise<Profile> {
     await delay(NETWORK_DELAY_MS);
     const next = { ...read(), ...update };
-    Storage.setItemSync(STORAGE_KEY, JSON.stringify(next));
+    Storage.setItemSync(storageKey(), JSON.stringify(next));
     return next;
   },
 };

@@ -15,15 +15,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlbumCard } from '@/components/album-card';
 import { MenuSheet, type MenuItemKey } from '@/components/menu-sheet';
+import { HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAlbums } from '@/hooks/use-albums';
+import { useAuth } from '@/providers/auth-provider';
 import type { Album } from '@/types/album';
 
 export default function AlbumsScreen() {
   const { albums, status, refreshing, refresh } = useAlbums();
+  const { signOut } = useAuth();
   const insets = useSafeAreaInsets();
   // Menu en calque, sans navigation ; clé unique par ouverture (voir MenuSheet).
   const [menuKey, setMenuKey] = useState<number | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   const openAlbum = (album: Album) =>
     router.push({ pathname: '/album/[id]', params: { id: album.id } });
@@ -35,25 +39,27 @@ export default function AlbumsScreen() {
     // POC : paramètres et mentions légales n'ont pas encore d'écran.
   };
 
+  const menuButton = (
+    <Pressable
+      accessibilityLabel="Ouvrir le menu"
+      accessibilityRole="button"
+      onPress={() => setMenuKey((k) => (k ?? 0) + 1)}
+      hitSlop={8}
+      style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}>
+      {/* SF Symbols n'a pas de points verticaux : on tourne la version horizontale. */}
+      <SymbolView
+        name={{ ios: 'ellipsis', android: 'more_vert', web: 'more_vert' }}
+        size={20}
+        weight="heavy"
+        tintColor={Palette.text}
+        style={Platform.OS === 'ios' ? styles.menuIconVertical : undefined}
+        fallback={<Text style={styles.menuFallback}>⋮</Text>}
+      />
+    </Pressable>
+  );
+
   const header = (
     <View style={styles.header}>
-      <View style={styles.brandRow}>
-        <Text style={styles.brand}>Synkup</Text>
-        <Pressable
-          accessibilityLabel="Ouvrir le menu"
-          accessibilityRole="button"
-          onPress={() => setMenuKey((k) => (k ?? 0) + 1)}
-          hitSlop={8}
-          style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}>
-          <SymbolView
-            name={{ ios: 'line.3.horizontal', android: 'menu', web: 'menu' }}
-            size={18}
-            weight="heavy"
-            tintColor={Palette.text}
-            fallback={<Text style={styles.menuFallback}>≡</Text>}
-          />
-        </Pressable>
-      </View>
       <View style={styles.titleBlock}>
         <Text style={styles.title}>Mes albums</Text>
         <Text style={styles.subtitle}>
@@ -76,28 +82,26 @@ export default function AlbumsScreen() {
 
   return (
     <View style={styles.container}>
+      <ScreenHeader right={menuButton} scrolled={scrolled} />
       <FlatList
         data={albums}
         keyExtractor={(album) => album.id}
         renderItem={({ item }) => <AlbumCard album={item} onPress={openAlbum} />}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
-        // Le contenu défile sous la barre de statut, laissée transparente : iOS ajuste les
-        // marges aux zones sûres, Android reçoit un padding équivalent.
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
+        onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > HEADER_SCROLL_THRESHOLD)}
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.content,
-          {
-            paddingTop: Platform.OS === 'ios' ? 0 : insets.top,
-            paddingBottom: insets.bottom + Spacing.five,
-          },
+          { paddingTop: Spacing.two, paddingBottom: insets.bottom + Spacing.five },
         ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={refresh}
             tintColor={Palette.pink}
-            progressViewOffset={Platform.OS === 'ios' ? 0 : insets.top}
+            progressViewOffset={0}
           />
         }
       />
@@ -106,7 +110,12 @@ export default function AlbumsScreen() {
         <MenuSheet
           key={menuKey}
           onSelect={onMenuSelect}
-          onLogout={() => {}}
+          onLogout={() => {
+            // La feuille se ferme, puis la session est effacée : les routes protégées
+            // basculent d'elles-mêmes sur l'écran de connexion.
+            setMenuKey(null);
+            signOut();
+          }}
           onClose={() => setMenuKey(null)}
         />
       )}
@@ -124,21 +133,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   header: {
-    paddingTop: Spacing.two,
     paddingBottom: Spacing.one,
-    gap: Spacing.three,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  brand: {
-    color: Palette.pink,
-    fontFamily: Fonts.rounded,
-    fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: -0.5,
   },
   menuButton: {
     width: 40,
@@ -147,6 +142,9 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  menuIconVertical: {
+    transform: [{ rotate: '90deg' }],
   },
   menuFallback: {
     color: Palette.text,

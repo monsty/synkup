@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressModal } from '@/components/progress-modal';
 import { PhotoGrid } from '@/components/photo-grid';
 import { PhotoViewer } from '@/components/photo-viewer';
+import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAlbum } from '@/hooks/use-album';
 import { useDownloadSelection } from '@/hooks/use-download-selection';
@@ -37,6 +38,8 @@ export default function AlbumScreen() {
   // La clé change à chaque ouverture pour repartir d'une instance neuve, même si on rouvre
   // pendant le fondu de sortie de la précédente.
   const [viewer, setViewer] = useState<{ index: number; key: number } | null>(null);
+  // Filet sous l'en-tête collant dès que la grille a défilé.
+  const [scrolled, setScrolled] = useState(false);
   const openViewer = (index: number) => setViewer((v) => ({ index, key: (v?.key ?? 0) + 1 }));
   const selecting = download.mode === 'selecting';
   const busy = download.mode === 'running';
@@ -106,35 +109,21 @@ export default function AlbumScreen() {
     );
   }
 
+  const headerRight = (
+    <View style={styles.pillRow}>
+      {/* L'étiquette n'apparaît qu'une fois le nombre connu, avec un fondu. */}
+      {status === 'ready' && (
+        <Animated.View entering={FadeIn.duration(200)} style={styles.countPill}>
+          <Text style={styles.countValue}>{photos.length}</Text>
+          <Text style={styles.countUnit}>photo{photos.length > 1 ? 's' : ''}</Text>
+        </Animated.View>
+      )}
+      {downloadButton}
+    </View>
+  );
+
   const header = (
     <View style={styles.header}>
-      <View style={styles.brandRow}>
-        <Pressable
-          accessibilityLabel="Retour aux albums"
-          accessibilityRole="button"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          hitSlop={8}
-          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-          <SymbolView
-            name={{ ios: 'chevron.left', android: 'arrow_back', web: 'arrow_back' }}
-            size={18}
-            weight="heavy"
-            tintColor={Palette.text}
-            fallback={<Text style={styles.headerIconFallback}>‹</Text>}
-          />
-        </Pressable>
-        <Text style={styles.brand}>Synkup</Text>
-        <View style={styles.pillRow}>
-          {/* L'étiquette n'apparaît qu'une fois le nombre connu, avec un fondu. */}
-          {status === 'ready' && (
-            <Animated.View entering={FadeIn.duration(200)} style={styles.countPill}>
-              <Text style={styles.countValue}>{photos.length}</Text>
-              <Text style={styles.countUnit}>photo{photos.length > 1 ? 's' : ''}</Text>
-            </Animated.View>
-          )}
-          {downloadButton}
-        </View>
-      </View>
       {album && (
         <View style={styles.albumTitle}>
           <Text style={styles.albumName}>{album.name}</Text>
@@ -182,12 +171,17 @@ export default function AlbumScreen() {
 
   return (
     <View style={styles.container}>
+      <ScreenHeader
+        left={<BackButton accessibilityLabel="Retour aux albums" />}
+        right={headerRight}
+        scrolled={scrolled}
+      />
       <PhotoGrid
         photos={photos}
         refreshing={refreshing}
         onRefresh={refresh}
-        // Le contenu défile sous la barre de statut, laissée transparente.
-        topInset={insets.top}
+        onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > HEADER_SCROLL_THRESHOLD)}
+        topInset={Spacing.one}
         bottomInset={insets.bottom + FAB_SIZE + Spacing.five}
         onPressPhoto={(photo) => openViewer(photos.findIndex((p) => p.id === photo.id))}
         selectable={selecting}
@@ -305,22 +299,9 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.background,
   },
   header: {
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.one,
     paddingBottom: Spacing.three,
     gap: Spacing.three,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-  },
-  brand: {
-    flex: 1,
-    color: Palette.pink,
-    fontFamily: Fonts.rounded,
-    fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: -0.5,
   },
   pillRow: {
     flexDirection: 'row',
@@ -354,20 +335,6 @@ const styles = StyleSheet.create({
   },
   bottomActionSpread: {
     justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radii.pill,
-    backgroundColor: Palette.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIconFallback: {
-    color: Palette.text,
-    fontSize: 22,
-    fontWeight: '900',
-    lineHeight: 24,
   },
   exitButton: {
     width: FAB_SIZE,

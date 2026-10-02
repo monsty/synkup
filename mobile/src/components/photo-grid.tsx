@@ -2,7 +2,8 @@ import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import {
   FlatList,
-  Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -22,8 +23,10 @@ type Props = {
   photos: AlbumPhoto[];
   refreshing: boolean;
   onRefresh: () => void;
+  /** Espace au-dessus du contenu (l'en-tête collant est en dehors de la liste). */
   topInset: number;
   bottomInset: number;
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onPressPhoto: (photo: AlbumPhoto) => void;
   /** Mode sélection : les tuiles affichent une case à cocher et le tap bascule la sélection. */
   selectable?: boolean;
@@ -39,6 +42,7 @@ export function PhotoGrid({
   onRefresh,
   topInset,
   bottomInset,
+  onScroll,
   onPressPhoto,
   selectable = false,
   selectedIds,
@@ -49,28 +53,22 @@ export function PhotoGrid({
   const { width } = useWindowDimensions();
   const tileSize = (width - SIDE_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
-  // Le contenu défile sous la barre de statut. Sur iOS, le système ajuste lui-même les marges
-  // de la liste aux zones sûres (position initiale et loader du pull-to-refresh compris).
-  // Android n'a pas cet ajustement : padding en haut et loader décalé d'autant.
-  const androidTopPadding = Platform.OS === 'ios' ? 0 : topInset;
-
   return (
     <FlatList
       data={photos}
       keyExtractor={(photo) => photo.id}
       numColumns={COLUMNS}
       columnWrapperStyle={styles.row}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: androidTopPadding, paddingBottom: bottomInset },
-      ]}
+      contentInsetAdjustmentBehavior="never"
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      contentContainerStyle={[styles.content, { paddingTop: topInset, paddingBottom: bottomInset }]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
           tintColor={Palette.pink}
-          progressViewOffset={androidTopPadding}
+          progressViewOffset={topInset}
         />
       }
       ListHeaderComponent={ListHeaderComponent}

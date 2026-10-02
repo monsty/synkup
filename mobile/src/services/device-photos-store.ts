@@ -5,11 +5,14 @@
  */
 import Storage from 'expo-sqlite/kv-store';
 
+import { getCurrentUserId } from '@/services/auth-api';
+
 /** photoId de l'album → id de l'asset dans la galerie du téléphone. */
 export type DevicePhotoMap = Record<string, string>;
 
 function storageKey(albumId: string) {
-  return `device-photos:${albumId}`;
+  // Préfixé par l'utilisateur : deux comptes sur le même téléphone ne se mélangent pas.
+  return `device-photos:${getCurrentUserId()}:${albumId}`;
 }
 
 export function getDevicePhotos(albumId: string): DevicePhotoMap {

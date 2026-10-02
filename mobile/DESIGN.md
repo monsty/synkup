@@ -49,15 +49,31 @@ Tout est gras.
 
 ## Structure des écrans
 
-En-tête commun : rangée avec la marque à gauche et une étiquette d'info ou un bouton rond à
-droite. L'étiquette d'info (« 12 photos », « 15 à trier », « 3 / 32 ») n'a pas de fond : seul
+En-tête commun (`ScreenHeader`) : rangée avec la marque à gauche et une étiquette d'info ou
+un bouton rond à droite. Il est réutilisé partout où l'écran est scrollable (accueil, album, profil, connexion), et il
+est collant :
+hors de la liste, fond `background` opaque couvrant la barre de statut, et un filet
+`surfaceStrong` qui apparaît en 150 ms dès que le contenu a défilé de 4 pt ; le titre et le
+sous-titre, eux, défilent avec le contenu. `centered` centre la marque entre deux emplacements
+de 40 (connexion). Le tri et le visualiseur, calques dépolis fermés par ✕, ont leur propre
+rangée. L'étiquette d'info (« 12 photos », « 15 à trier », « 3 / 32 ») n'a pas de fond : seul
 ce qui est cliquable porte le rond gris, pour qu'on ne confonde jamais les deux. Un écran enfant ajoute un rond gris à gauche de la marque : ✕ pour une modale,
 chevron gauche pour un écran empilé (album). Sous la rangée, un titre centré en gras (26) et
 un sous-titre centré en muted. Un bouton d'action secondaire se place à droite de la pilule :
 rond gris 40 avec icône rose (ex. téléchargement, `arrow.down.to.line` / `download`), spinner
 rose à la place de l'icône pendant l'action.
 
-- Mes albums (accueil) : marque + bouton menu rond gris (`line.3.horizontal` / `menu`) à
+- Connexion (`/sign-in`, seule route accessible hors session) : marque centrée, puis trois
+  étapes en fondu. Accueil : trois photos en éventail (136×180, arrondi 24, bord `card` 4,
+  rotations −10°/0°/10°), titre 28 « Tes photos, dans l'album de tout le monde », sous-titre
+  muted, et trois pilules 56 pleine largeur poussées en bas : Apple (fond `text`, logo et texte
+  blancs), Google (fond `card`, bordure `surfaceStrong`, « G » gras), email (rose avec ombre,
+  enveloppe blanche) ; mention légale 12 muted dessous. Étape email : `TextField` email
+  autofocus + pilule rose « Recevoir mon code » (inactive à 40 % tant que l'email est invalide).
+  Étape code : `TextField` numérique 6 chiffres avec autocomplétion du code reçu, pilule rose
+  « Me connecter », lien rose « Renvoyer le code ». Chevron retour à gauche de la marque sur
+  les étapes 2 et 3. Pas de mot de passe : connexion par code, Apple ou Google uniquement.
+- Mes albums (accueil) : marque + bouton menu rond gris (trois points verticaux : `ellipsis` tourné de 90° / `more_vert`) à
   droite, titre « Mes albums », sous-titre « N albums partagés avec toi ». Une carte par ligne
   (`AlbumCard`) : fond `card` blanc, arrondi 40, ombre légère (opacité 0,08, rayon 16).
   Couverture 16:10 avec deux pilules sombres translucides en haut : l'état à gauche (« En
@@ -83,7 +99,8 @@ rose à la place de l'icône pendant l'action.
 - Menu (`MenuSheet`) : feuille coulissante par le bas en calque (pas une route), fond dépoli
   clair à 45 %, carte `card` arrondie 40 à 8 px des bords avec poignée. Liste sur fond
   `background` arrondie 24 : rond blanc avec icône rose, libellé 17 gras, chevron muted,
-  séparateurs fins. En bas, pilule grise « Se déconnecter » en rose avec icône. Fermeture : tap
+  séparateurs fins. En bas, pilule grise « Se déconnecter » en rose avec icône : efface la session du stockage
+  sécurisé, l'app bascule sur la connexion. Fermeture : tap
   sur le fond, glissement vers le bas (90 px ou vélocité 700), retour Android. Entrée en ressort
   sans rebond, sortie 200 ms.
 - Album (`/album/[id]`) : chevron retour à gauche de la marque. Pendant le chargement, pas
@@ -186,5 +203,9 @@ Galerie : `photo.on.rectangle.angled` / `photo_library`. Photo de profil : `came
 - Reanimated : ne pas poser une animation d'entrée/sortie (`entering`/`exiting`) et un style
   animé (`useAnimatedStyle`) sur le même nœud, l'une écrase l'autre ; envelopper dans une vue
   dédiée. Sur `expo-blur`, la prop s'appelle `blurMethod` (`experimentalBlurMethod` est dépréciée).
+- Session : jeton + utilisateur dans `expo-secure-store` (trousseau / Keystore), restaurés au
+  lancement par `AuthProvider` ; `Stack.Protected` dans le layout racine n'expose que la
+  connexion ou l'app selon l'état. Les données locales (photos triées, présentes sur le
+  téléphone, profil) sont préfixées par l'identifiant utilisateur.
 - Hermes sous Expo Go n'a pas `Intl.RelativeTimeFormat` : les dates relatives sont écrites à la
   main dans `src/types/album.ts`.
