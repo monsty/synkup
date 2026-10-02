@@ -1,6 +1,7 @@
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { SymbolView } from 'expo-symbols';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   interpolate,
@@ -12,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DownloadModal } from '@/components/download-modal';
 import { PhotoGrid } from '@/components/photo-grid';
+import { PhotoViewer } from '@/components/photo-viewer';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAlbum } from '@/hooks/use-album';
 import { useDownloadSelection } from '@/hooks/use-download-selection';
@@ -29,6 +31,11 @@ export default function AlbumScreen() {
   const { album, photos, status, refreshing, refresh } = useAlbum();
   const insets = useSafeAreaInsets();
   const download = useDownloadSelection(album, photos);
+  // Visualiseur en calque, sans navigation : index de la photo ouverte ou null.
+  // La clé change à chaque ouverture pour repartir d'une instance neuve, même si on rouvre
+  // pendant le fondu de sortie de la précédente.
+  const [viewer, setViewer] = useState<{ index: number; key: number } | null>(null);
+  const openViewer = (index: number) => setViewer((v) => ({ index, key: (v?.key ?? 0) + 1 }));
   const selecting = download.mode === 'selecting';
   const busy = download.mode === 'running';
   const selectedCount = download.selectedIds.size;
@@ -130,13 +137,15 @@ export default function AlbumScreen() {
     );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <PhotoGrid
         photos={photos}
         refreshing={refreshing}
         onRefresh={refresh}
+        // Le contenu défile sous la barre de statut, laissée transparente.
+        topInset={insets.top}
         bottomInset={insets.bottom + FAB_SIZE + Spacing.five}
-        onPressPhoto={(photo) => router.push({ pathname: '/photo/[id]', params: { id: photo.id } })}
+        onPressPhoto={(photo) => openViewer(photos.findIndex((p) => p.id === photo.id))}
         selectable={selecting}
         selectedIds={download.selectedIds}
         onToggle={(photo) => download.toggle(photo.id)}
@@ -199,6 +208,14 @@ export default function AlbumScreen() {
         </Pressable>
       )}
       <DownloadModal overlay={download.overlay} />
+      {viewer && (
+        <PhotoViewer
+          key={viewer.key}
+          photos={photos}
+          initialIndex={viewer.index}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </View>
   );
 }

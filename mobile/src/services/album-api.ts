@@ -58,14 +58,6 @@ function notify() {
   listeners.forEach((listener) => listener(snapshot));
 }
 
-export type PhotoContext = {
-  photo: AlbumPhoto;
-  index: number;
-  count: number;
-  previous: AlbumPhoto | null;
-  next: AlbumPhoto | null;
-};
-
 export type UploadPhotoInput = {
   localUri: string;
   width: number | null;
@@ -82,24 +74,6 @@ export const albumApi = {
   async getPhotos(_albumId: string): Promise<AlbumPhoto[]> {
     await delay(NETWORK_DELAY_MS);
     return sortByDateDesc(photos);
-  },
-
-  async getPhoto(photoId: string): Promise<AlbumPhoto | null> {
-    return photos.find((photo) => photo.id === photoId) ?? null;
-  },
-
-  /** Une photo avec sa position dans l'album et ses voisines, pour le visualiseur. */
-  async getPhotoContext(photoId: string): Promise<PhotoContext | null> {
-    const sorted = sortByDateDesc(photos);
-    const index = sorted.findIndex((photo) => photo.id === photoId);
-    if (index === -1) return null;
-    return {
-      photo: sorted[index],
-      index,
-      count: sorted.length,
-      previous: sorted[index - 1] ?? null,
-      next: sorted[index + 1] ?? null,
-    };
   },
 
   async uploadPhoto(_albumId: string, input: UploadPhotoInput): Promise<AlbumPhoto> {

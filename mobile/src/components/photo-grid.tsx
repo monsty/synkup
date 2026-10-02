@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import {
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -21,6 +22,7 @@ type Props = {
   photos: AlbumPhoto[];
   refreshing: boolean;
   onRefresh: () => void;
+  topInset: number;
   bottomInset: number;
   onPressPhoto: (photo: AlbumPhoto) => void;
   /** Mode sélection : les tuiles affichent une case à cocher et le tap bascule la sélection. */
@@ -35,6 +37,7 @@ export function PhotoGrid({
   photos,
   refreshing,
   onRefresh,
+  topInset,
   bottomInset,
   onPressPhoto,
   selectable = false,
@@ -46,15 +49,33 @@ export function PhotoGrid({
   const { width } = useWindowDimensions();
   const tileSize = (width - SIDE_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
+  // Le contenu défile sous la barre de statut. Sur iOS on réserve la place par un inset natif :
+  // le loader du pull-to-refresh s'y place de lui-même et son seuil reste celui du système.
+  // Android n'a pas d'inset : padding en haut et loader décalé d'autant.
+  const iosInset = Platform.OS === 'ios' ? topInset : 0;
+  const androidTopPadding = Platform.OS === 'ios' ? 0 : topInset;
+
   return (
     <FlatList
       data={photos}
       keyExtractor={(photo) => photo.id}
       numColumns={COLUMNS}
       columnWrapperStyle={styles.row}
-      contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
+      contentInset={{ top: iosInset }}
+      contentOffset={{ x: 0, y: -iosInset }}
+      scrollIndicatorInsets={{ top: iosInset }}
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: androidTopPadding, paddingBottom: bottomInset },
+      ]}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Palette.pink} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Palette.pink}
+          progressViewOffset={androidTopPadding}
+        />
       }
       ListHeaderComponent={ListHeaderComponent}
       ListEmptyComponent={ListEmptyComponent}

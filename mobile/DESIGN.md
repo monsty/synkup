@@ -55,7 +55,8 @@ Sous la rangée, un sous-titre centré en muted. Un bouton d'action secondaire s
 droite de la pilule : rond gris 40 avec icône rose (ex. téléchargement, `arrow.down.to.line`
 / `download`), spinner rose à la place de l'icône pendant l'action.
 
-- Album : fond `background`, grille 3 colonnes, espacement 8, marge latérale 16, tuiles
+- Album : le contenu défile sous la barre de statut, laissée transparente et sans voile.
+  Fond `background`, grille 3 colonnes, espacement 8, marge latérale 16, tuiles
   carrées arrondies (pression : opacité 0,85, échelle 0,97). Bouton + flottant rond rose, icône
   blanche, centré en bas : en Liquid Glass (`GlassView` d'`expo-glass-effect`, style `regular`,
   teinte `pinkGlass`, sans `isInteractive` qui étire le verre sous le doigt) sur iOS 26+, sinon
@@ -83,12 +84,15 @@ droite de la pilule : rond gris 40 avec icône rose (ex. téléchargement, `arro
   sombre centrée en bas. Actions : rond gris ✕ rose, puis pilule rose « Envoyer » avec
   icône d'upload blanche. Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
   qu'une fois le nombre connu.
-- Visualiseur photo : même fond dépoli. En-tête ✕ + marque + pilule « 3 / 32 ». Photo dans une
+- Visualiseur photo : calque rendu par-dessus l'album (pas une route : ouverture et fermeture
+  sont un changement d'état, fondu 120 ms, pour ne jamais bloquer les touches). Même fond dépoli. En-tête ✕ + marque + pilule « 3 / 32 ». Photo dans une
   carte arrondie 40 au ratio de l'image, bornée par l'écran. En bas, une pilule grise avec
-  l'auteur en gras puis la date en muted. Fermeture : ✕, tap sur le fond, ou glissement
-  vertical (le fond s'estompe avec la distance). Glissement horizontal : photo précédente ou
-  suivante, avec résistance au bord. Pinch to zoom jusqu'à 4×, double tap 2,5×, déplacement
-  borné quand on est zoomé.
+  l'auteur en gras puis la date en muted. Les gestes couvrent tout l'écran, pas seulement la
+  photo : on peut glisser à côté d'une petite photo. Fermeture : ✕, tap hors de la photo, ou
+  glissement vertical (le fond s'estompe avec la distance) ; un glissement ne ferme jamais par
+  tap, le tap échoue dès que le doigt bouge. Glissement horizontal : photo précédente ou
+  suivante, avec résistance au bord. Pas de zoom pour le moment (retiré du POC, à réintroduire
+  plus tard, probablement via une bibliothèque dédiée).
 
 ## Animations
 
@@ -97,7 +101,7 @@ droite de la pilule : rond gris 40 avec icône rose (ex. téléchargement, `arro
 - Compteur : seuls les chiffres qui changent s'animent (sortie vers le haut 180 ms, entrée
   par le bas 220 ms), positions indexées depuis la droite. Composant `AnimatedCounter`.
 - Pression sur un bouton : opacité 0,8 et échelle 0,95.
-- Visualiseur : fermeture après 120 px ou vélocité 800 (envol 180 ms, modale en fondu 150 ms,
+- Visualiseur : fermeture après 120 px ou vélocité 800 (envol 180 ms, calque en fondu 120 ms,
   fermeture lancée dès le seuil). Navigation après 80 px ou vélocité 600 (sortie 150 ms,
   entrée 180 ms par le côté opposé). Entrée de la carte en `ZoomIn` 220 ms.
 
