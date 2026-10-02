@@ -1,0 +1,39 @@
+# Dépendances
+node_modules/
+
+# Expo / Metro
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+
+# Natif généré (Continuous Native Generation)
+mobile/ios/
+mobile/android/
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Environnement
+.env*.local
+.env
+
+# Logs et caches
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.tsbuildinfo
+
+# macOS / éditeurs
+.DS_Store
+*.pem
+.vscode/
+.idea/
+
+# Claude Code : réglages personnels uniquement
+.claude/settings.local.json
