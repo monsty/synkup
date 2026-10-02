@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DownloadModal } from '@/components/download-modal';
+import { ProgressModal } from '@/components/progress-modal';
 import { PhotoGrid } from '@/components/photo-grid';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
@@ -236,7 +236,7 @@ export default function AlbumScreen() {
         </View>
       )}
 
-      <DownloadModal overlay={download.overlay} />
+      <ProgressModal overlay={download.overlay} />
       {viewer && (
         <PhotoViewer
           key={viewer.key}

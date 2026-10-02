@@ -94,8 +94,8 @@ rose à la place de l'icône pendant l'action.
   une flèche retour rose (`arrow.uturn.backward` / `undo`) pour quitter la sélection, collé à droite un rond rose avec l'icône de
   téléchargement blanche et une pastille menthe (bord `background` 2 px, chiffre `onMint` 13) à cheval
   en haut à droite indiquant le nombre de photos cochées, « 0 » compris : le bouton reste rose et actif, un
-  tap sans sélection ne fait rien. Pendant l'enregistrement, une modale centrée bloque
-  l'écran (fond dépoli clair à 50 %, carte `background` arrondie 40, largeur max 260, hauteur fixe 150 pour ne pas se réajuster entre progression et résultat, ombre) :
+  tap sans sélection ne fait rien. Pendant l'enregistrement, la `ProgressModal` (composant partagé
+  avec l'envoi manuel du tri, pilotée par `useProgressOverlay`) bloque l'écran (fond dépoli clair à 50 %, carte `background` arrondie 40, largeur max 260, hauteur fixe 150 pour ne pas se réajuster entre progression et résultat, ombre) :
   titre « Enregistrement », compteur « 3 / 12 » en muted, barre de progression 8 px rose sur
   `surfaceStrong` dont le remplissage s'anime en 260 ms. À la fin, un rond rose de 48 avec une
   coche blanche (sombre avec « ! » en cas d'erreur) et le résultat, puis fermeture automatique
@@ -103,7 +103,15 @@ rose à la place de l'icône pendant l'action.
   Le + revient ensuite. Rien n'est épinglé au scroll. Une photo supprimée de la galerie
   reste considérée comme présente (pas de vérification d'existence) : l'utilisateur la recoche
   à la main s'il la veut de nouveau.
-- Tri (swipe) : modale transparente en fondu, `BlurView` clair (intensité 70) + voile blanc
+- Tri (swipe) : à droite de l'étiquette « N à trier », un rond gris 40 avec l'icône galerie
+  rose (`photo.on.rectangle.angled` / `photo_library`) ouvre le sélecteur natif du système
+  (`expo-image-picker`, PHPicker / Photo Picker, multi-sélection sans limite) pour choisir des
+  photos hors du flux de swipe ; les photos choisies sont envoyées une par une dans la
+  `ProgressModal` (titre « Envoi », compteur, barre), retirées des candidates, et celles déjà
+  dans l'album sont ignorées ; le résultat s'affiche puis la modale se ferme seule, et si au moins une photo est partie
+  l'écran de tri se ferme dans la foulée pour revenir à l'album (y compris depuis l'état
+  « Tout est trié »).
+  Modale transparente en fondu, `BlurView` clair (intensité 70) + voile blanc
   à 30 % par-dessus l'album. Carte plein cadre arrondie 40 avec la date de la photo en pilule
   sombre centrée en bas. Actions : rond gris ✕ rose, puis pilule rose « Envoyer » avec
   icône nuage-flèche blanche. Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
@@ -134,6 +142,7 @@ rose à la place de l'icône pendant l'action.
 `expo-symbols` avec un nom par plateforme (`{ ios, android, web }`) et un `fallback` texte.
 Poids `bold` ou `heavy`. Envoyer : `icloud.and.arrow.up` / `cloud_upload` (nuage avec flèche montante, trait fin `semibold`).
 Passer et fermer : `xmark` / `close`. Ajouter : `plus` / `add`.
+Galerie : `photo.on.rectangle.angled` / `photo_library`.
 
 ## Pièges connus
 

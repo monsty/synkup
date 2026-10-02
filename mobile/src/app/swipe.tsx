@@ -1,14 +1,18 @@
 import { BlurView } from 'expo-blur';
 import { SymbolView } from 'expo-symbols';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedCounter } from '@/components/animated-counter';
+import { ProgressModal } from '@/components/progress-modal';
 import { SwipeDeck } from '@/components/swipe-deck';
 import { Fonts, Spacing, Palette } from '@/constants/theme';
+import { describeBatch, useProgressOverlay } from '@/hooks/use-progress-overlay';
 import { useSwipeSession } from '@/hooks/use-swipe-session';
+import { pickPhotosFromGallery } from '@/services/photo-picker';
 import { formatAlbumRange } from '@/types/album';
 
 export default function SwipeScreen() {
@@ -19,6 +23,7 @@ export default function SwipeScreen() {
     error,
     candidates,
     decide,
+    sendMany,
     uploadsInFlight,
     canAskPermissionAgain,
     requestPermission,
@@ -31,6 +36,34 @@ export default function SwipeScreen() {
   };
 
   const remaining = candidates.length;
+
+  // Sélection manuelle dans la galerie, via le sélecteur natif du système, puis envoi
+  // suivi dans la même modale de progression que l'enregistrement sur le téléphone.
+  const [picking, setPicking] = useState(false);
+  const { overlay, progress, finish } = useProgressOverlay();
+  const pickFromGallery = async () => {
+    if (picking) return;
+    setPicking(true);
+    try {
+      const chosen = await pickPhotosFromGallery();
+      if (chosen.length === 0) return;
+      progress('Envoi', 0, chosen.length);
+      const result = await sendMany(chosen, (done, total) => progress('Envoi', done, total));
+      await finish(
+        describeBatch(
+          result.sent,
+          result.failed,
+          'envoyée',
+          result.skipped > 0 ? 'Déjà dans l’album' : 'Rien à envoyer'
+        ),
+        result.sent === 0 && result.failed > 0
+      );
+      // Des photos sont parties : le tri a rempli son rôle, on revient à l'album les voir.
+      if (result.sent > 0) close();
+    } finally {
+      setPicking(false);
+    }
+  };
   // Insets lus depuis le provider racine : avec une modale transparente, un SafeAreaView local
   // peut rendre une première frame sans inset pendant l'animation d'ouverture.
   const insets = useSafeAreaInsets();
@@ -66,13 +99,40 @@ export default function SwipeScreen() {
 
           <Text style={styles.brand}>Synkup</Text>
 
-          {/* La pilule n'apparaît qu'une fois le nombre connu, avec un fondu. */}
+          {/* L'étiquette n'apparaît qu'une fois le nombre connu, avec un fondu. */}
           {status === 'ready' && (
             <Animated.View entering={FadeIn.duration(200)} style={styles.counterPill}>
               {uploadsInFlight > 0 && <ActivityIndicator size="small" color={Palette.pink} />}
               <AnimatedCounter value={remaining} style={styles.counterValue} />
               <Text style={styles.counterUnit}>à trier</Text>
             </Animated.View>
+          )}
+
+          {/* Sélection manuelle : ouvre la galerie du téléphone. */}
+          {status === 'ready' && (
+            <Pressable
+              accessibilityLabel="Choisir des photos dans ma galerie"
+              accessibilityRole="button"
+              disabled={picking}
+              onPress={pickFromGallery}
+              hitSlop={8}
+              style={({ pressed }) => [styles.galleryButton, pressed && styles.pressed]}>
+              {picking ? (
+                <ActivityIndicator size="small" color={Palette.pink} />
+              ) : (
+                <SymbolView
+                  name={{
+                    ios: 'photo.on.rectangle.angled',
+                    android: 'photo_library',
+                    web: 'photo_library',
+                  }}
+                  size={18}
+                  weight="bold"
+                  tintColor={Palette.pink}
+                  fallback={<Text style={styles.galleryFallback}>▣</Text>}
+                />
+              )}
+            </Pressable>
           )}
         </View>
 
@@ -132,6 +192,8 @@ export default function SwipeScreen() {
           </Animated.View>
         )}
       </View>
+
+      <ProgressModal overlay={overlay} />
     </View>
   );
 }
@@ -192,6 +254,19 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   /** Étiquette d'info : pas de fond, pour ne pas ressembler aux boutons ronds gris. */
+  galleryButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryFallback: {
+    color: Palette.pink,
+    fontSize: 18,
+    fontWeight: '800',
+  },
   counterPill: {
     flexDirection: 'row',
     alignItems: 'center',

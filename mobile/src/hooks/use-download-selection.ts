@@ -1,30 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 
-import type { DownloadOverlay } from '@/components/download-modal';
+import { describeBatch, useProgressOverlay } from '@/hooks/use-progress-overlay';
 import {
   downloadPhotos,
   getPhotosOnDevice,
   PhotoPermissionError,
-  type DownloadResult,
 } from '@/services/photo-downloader';
 import type { Album, AlbumPhoto } from '@/types/album';
 
-/** Temps d'affichage du résultat dans la modale avant sa fermeture. */
-const DONE_DURATION_MS = 1600;
-const ERROR_DURATION_MS = 2600;
-
 export type DownloadMode = 'idle' | 'selecting' | 'running';
-
-function describe(result: DownloadResult): string {
-  const parts: string[] = [];
-  if (result.saved > 0) {
-    parts.push(
-      `${result.saved} photo${result.saved > 1 ? 's' : ''} enregistrée${result.saved > 1 ? 's' : ''}`
-    );
-  }
-  if (result.failed > 0) parts.push(`${result.failed} en échec`);
-  return parts.join(' · ') || 'Rien à enregistrer';
-}
 
 /**
  * Sélection de photos à enregistrer sur le téléphone : à l'ouverture, les photos absentes
@@ -33,25 +17,7 @@ function describe(result: DownloadResult): string {
 export function useDownloadSelection(album: Album | null, photos: AlbumPhoto[]) {
   const [mode, setMode] = useState<DownloadMode>('idle');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
-  const [overlay, setOverlay] = useState<DownloadOverlay | null>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (closeTimer.current) clearTimeout(closeTimer.current);
-    },
-    []
-  );
-
-  /** Affiche le résultat dans la modale puis la referme toute seule. */
-  const finishWith = useCallback((text: string, error = false) => {
-    setOverlay({ kind: 'done', text, error });
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(
-      () => setOverlay(null),
-      error ? ERROR_DURATION_MS : DONE_DURATION_MS
-    );
-  }, []);
+  const { overlay, progress, finish: finishWith } = useProgressOverlay();
 
   const failWith = useCallback(
     (e: unknown) => {
@@ -94,18 +60,18 @@ export function useDownloadSelection(album: Album | null, photos: AlbumPhoto[]) 
     if (!album || mode !== 'selecting' || selectedIds.size === 0) return;
     setMode('running');
     const chosen = photos.filter((photo) => selectedIds.has(photo.id));
-    setOverlay({ kind: 'progress', done: 0, total: chosen.length });
+    progress('Enregistrement', 0, chosen.length);
     try {
       const result = await downloadPhotos(album.id, chosen, ({ done, total }) =>
-        setOverlay({ kind: 'progress', done, total })
+        progress('Enregistrement', done, total)
       );
-      finishWith(describe(result));
+      finishWith(describeBatch(result.saved, result.failed, 'enregistrée', 'Rien à enregistrer'));
       setSelectedIds(new Set());
       setMode('idle');
     } catch (e: unknown) {
       failWith(e);
     }
-  }, [album, mode, photos, selectedIds, finishWith, failWith]);
+  }, [album, mode, photos, selectedIds, progress, finishWith, failWith]);
 
   return {
     mode,

@@ -21,3 +21,4 @@ export async function getGalleryPhotosBetween(start: Date, end: Date): Promise<G
     creationTime: asset.creationTime,
   }));
 }
+

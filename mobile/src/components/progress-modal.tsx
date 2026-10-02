@@ -12,12 +12,12 @@ import Animated, {
 
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 
-export type DownloadOverlay =
-  | { kind: 'progress'; done: number; total: number }
+export type ProgressOverlay =
+  | { kind: 'progress'; title: string; done: number; total: number }
   | { kind: 'done'; text: string; error?: boolean };
 
 type Props = {
-  overlay: DownloadOverlay | null;
+  overlay: ProgressOverlay | null;
 };
 
 const FILL_DURATION_MS = 260;
@@ -25,10 +25,11 @@ const FILL_DURATION_MS = 260;
 const CARD_HEIGHT = 150;
 
 /**
- * Modale centrée qui bloque l'écran pendant l'enregistrement des photos :
- * phrase d'état, barre de progression, puis résultat avec une coche avant de disparaître.
+ * Modale centrée qui bloque l'écran pendant une opération par lots (enregistrement, envoi) :
+ * titre, compteur, barre de progression, puis résultat avec une coche avant de disparaître.
+ * Pilotée par `useProgressOverlay`.
  */
-export function DownloadModal({ overlay }: Props) {
+export function ProgressModal({ overlay }: Props) {
   if (!overlay) return null;
 
   return (
@@ -48,7 +49,7 @@ export function DownloadModal({ overlay }: Props) {
           exiting={ZoomOut.duration(150)}
           style={styles.card}>
           {overlay.kind === 'progress' ? (
-            <ProgressContent done={overlay.done} total={overlay.total} />
+            <ProgressContent title={overlay.title} done={overlay.done} total={overlay.total} />
           ) : (
             <DoneContent text={overlay.text} error={overlay.error} />
           )}
@@ -58,7 +59,7 @@ export function DownloadModal({ overlay }: Props) {
   );
 }
 
-function ProgressContent({ done, total }: { done: number; total: number }) {
+function ProgressContent({ title, done, total }: { title: string; done: number; total: number }) {
   const ratio = total > 0 ? done / total : 0;
   const fillStyle = useAnimatedStyle(() => ({
     transform: [{ scaleX: withTiming(ratio, { duration: FILL_DURATION_MS }) }],
@@ -66,7 +67,7 @@ function ProgressContent({ done, total }: { done: number; total: number }) {
 
   return (
     <>
-      <Text style={styles.title}>Enregistrement</Text>
+      <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>
         {done} / {total}
       </Text>

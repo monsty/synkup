@@ -44,6 +44,14 @@
           ],
           "preventAutomaticLimitedAccessAlert": true
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Synkup accède à tes photos pour celles que tu choisis d'envoyer dans l'album.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {
