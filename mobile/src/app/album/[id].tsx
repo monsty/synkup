@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  FadeIn,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -124,10 +125,13 @@ export default function AlbumScreen() {
         </Pressable>
         <Text style={styles.brand}>Synkup</Text>
         <View style={styles.pillRow}>
-          <View style={styles.countPill}>
-            <Text style={styles.countValue}>{status === 'ready' ? photos.length : '–'}</Text>
-            <Text style={styles.countUnit}>photo{photos.length > 1 ? 's' : ''}</Text>
-          </View>
+          {/* L'étiquette n'apparaît qu'une fois le nombre connu, avec un fondu. */}
+          {status === 'ready' && (
+            <Animated.View entering={FadeIn.duration(200)} style={styles.countPill}>
+              <Text style={styles.countValue}>{photos.length}</Text>
+              <Text style={styles.countUnit}>photo{photos.length > 1 ? 's' : ''}</Text>
+            </Animated.View>
+          )}
           {downloadButton}
         </View>
       </View>
@@ -383,14 +387,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
   },
+  /** Étiquette d'info : pas de fond, pour ne pas ressembler aux boutons ronds gris. */
   countPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one + Spacing.half,
     height: 40,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radii.pill,
-    backgroundColor: Palette.surface,
+    paddingHorizontal: Spacing.one,
   },
   countValue: {
     color: Palette.text,

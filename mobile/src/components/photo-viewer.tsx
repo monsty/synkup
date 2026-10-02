@@ -332,14 +332,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: -0.5,
   },
+  /** Étiquette d'info : pas de fond, pour ne pas ressembler aux boutons ronds gris. */
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
     height: 40,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radii.pill,
-    backgroundColor: Palette.surface,
+    paddingHorizontal: Spacing.one,
   },
   pillValue: {
     color: Palette.text,

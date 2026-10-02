@@ -29,8 +29,8 @@ rose. La menthe ne sert qu'en accent, par exemple la pastille de compteur. Pas d
 
 - `card` 40 : carte de swipe.
 - `tile` 18 : tuiles de la grille.
-- `pill` 999 : toute pilule ou bouton rond (hauteur 40 pour les pilules d'info, 64 à 68 pour
-  les boutons d'action, 56 pour les boutons de message).
+- `pill` 999 : tout bouton rond ou pilule (40 pour les boutons d'en-tête, 64 à 68 pour les
+  boutons d'action, 56 pour les boutons de message). Les étiquettes d'info n'ont pas de fond.
 
 Ombres uniquement sous les éléments flottants (carte de swipe, bouton +) : noir, opacité
 0,18, rayon 16 à 24, décalage vertical 8 à 12.
@@ -42,15 +42,16 @@ Tout est gras.
 
 - Marque « Synkup » : 30, weight 900, letterSpacing -0.5, rose.
 - Titre d'écran ou d'album : 26 à 32, weight 800 à 900, centré.
-- Chiffre de pilule : 20, weight 800, `tabular-nums`. Unité à côté : 14, weight 600, muted.
+- Chiffre d'étiquette : 20, weight 800, `tabular-nums`. Unité à côté : 14, weight 600, muted.
 - Corps et aides : 14 à 16, weight 600, muted, centré.
 - Texte sur photo : 15, weight 700, blanc, dans une pilule `rgba(20,20,26,0.6)`.
 - Tampons de swipe : 22, weight 900, letterSpacing 1.5, majuscules.
 
 ## Structure des écrans
 
-En-tête commun : rangée avec la marque à gauche et une pilule d'info ou un bouton rond à
-droite. Un écran enfant ajoute un rond gris à gauche de la marque : ✕ pour une modale,
+En-tête commun : rangée avec la marque à gauche et une étiquette d'info ou un bouton rond à
+droite. L'étiquette d'info (« 12 photos », « 15 à trier », « 3 / 32 ») n'a pas de fond : seul
+ce qui est cliquable porte le rond gris, pour qu'on ne confonde jamais les deux. Un écran enfant ajoute un rond gris à gauche de la marque : ✕ pour une modale,
 chevron gauche pour un écran empilé (album). Sous la rangée, un titre centré en gras (26) et
 un sous-titre centré en muted. Un bouton d'action secondaire se place à droite de la pilule :
 rond gris 40 avec icône rose (ex. téléchargement, `arrow.down.to.line` / `download`), spinner
@@ -102,7 +103,7 @@ rose à la place de l'icône pendant l'action.
   icône d'upload blanche. Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
   qu'une fois le nombre connu.
 - Visualiseur photo : calque rendu par-dessus l'album (pas une route : ouverture et fermeture
-  sont un changement d'état, fondu 120 ms, pour ne jamais bloquer les touches). Même fond dépoli. En-tête ✕ + marque + pilule « 3 / 32 ». Photo dans une
+  sont un changement d'état, fondu 120 ms, pour ne jamais bloquer les touches). Même fond dépoli. En-tête ✕ + marque + étiquette « 3 / 32 ». Photo dans une
   carte arrondie 40 au ratio de l'image, bornée par l'écran. En bas, une pilule grise avec
   l'auteur en gras puis la date en muted. Les gestes couvrent tout l'écran, pas seulement la
   photo : on peut glisser à côté d'une petite photo. Fermeture : ✕, tap hors de la photo, ou

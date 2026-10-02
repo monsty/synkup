@@ -191,14 +191,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: -0.5,
   },
+  /** Étiquette d'info : pas de fond, pour ne pas ressembler aux boutons ronds gris. */
   counterPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one + Spacing.half,
     height: 40,
-    paddingHorizontal: Spacing.three,
-    borderRadius: 20,
-    backgroundColor: Palette.surface,
+    paddingHorizontal: Spacing.one,
   },
   counterValue: {
     color: Palette.text,
