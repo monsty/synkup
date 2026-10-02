@@ -4,7 +4,6 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -55,18 +54,21 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Pas de KeyboardAvoidingView : la liste ajuste elle-même ses insets au clavier. */}
+      <View style={styles.container}>
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
+          // iOS : la liste réserve la hauteur du clavier et fait défiler le champ focalisé
+          // au-dessus, en gardant le clavier ouvert quand on scrolle.
+          automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode="none"
           contentContainerStyle={[
             styles.content,
             {
               paddingTop: Platform.OS === 'ios' ? 0 : insets.top,
-              paddingBottom: insets.bottom + Spacing.five,
+              // Marge sous le dernier élément : le champ focalisé ne colle pas au clavier.
+              paddingBottom: insets.bottom + Spacing.six + Spacing.four,
             },
           ]}>
           <View style={styles.brandRow}>
@@ -108,7 +110,7 @@ export default function ProfileScreen() {
             />
           )}
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
 
       {toast && (
         <Animated.View
