@@ -86,7 +86,13 @@ rose à la place de l'icône pendant l'action.
   teinte `pinkGlass`, sans `isInteractive` qui étire le verre sous le doigt) sur iOS 26+, sinon
   rond rose plein avec ombre. Pression : soulèvement maison, échelle 1,08 en ressort et voile
   blanc enfant à 22 %. Jamais d'opacité sur le verre lui-même ni sur ses parents.
-  Mode sélection (après tap sur le bouton de téléchargement) : le bouton devient ✕, les tuiles
+  Mode sélection (après tap sur le bouton de téléchargement) : un bandeau apparaît sous la
+  date (carte `card` arrondie 18, icône rose dans un rond gris 32, texte muted 14 ; marge
+  haute 4 pour compenser le gap de l'en-tête et la ligne de la date, de sorte que l'espace
+  visuel soit le même au-dessus et en dessous, ~24) : « On
+  t'a pré-sélectionné les photos qui n'ont pas encore été enregistrées sur ce téléphone », ou,
+  si tout est déjà là, « Tu as déjà toutes les photos sur ce téléphone. Coche celles que tu
+  veux enregistrer à nouveau ». Le bouton devient ✕, les tuiles
   non cochées sont voilées de blanc à 45 % avec un anneau blanc en haut à droite, les tuiles
   cochées gardent la photo nette avec un rond rose et une coche blanche. Le tap sur une tuile
   bascule la sélection au lieu d'ouvrir le visualiseur. L'action prend la place du bouton +

@@ -17,6 +17,8 @@ export type DownloadMode = 'idle' | 'selecting' | 'running';
 export function useDownloadSelection(album: Album | null, photos: AlbumPhoto[]) {
   const [mode, setMode] = useState<DownloadMode>('idle');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  /** Nombre de photos pré-cochées à l'ouverture (absentes du téléphone), pour le bandeau. */
+  const [preselectedCount, setPreselectedCount] = useState(0);
   const { overlay, progress, finish: finishWith } = useProgressOverlay();
 
   const failWith = useCallback(
@@ -36,7 +38,9 @@ export function useDownloadSelection(album: Album | null, photos: AlbumPhoto[]) 
   const start = useCallback(() => {
     if (!album || mode !== 'idle') return;
     const onDevice = getPhotosOnDevice(album.id, photos);
-    setSelectedIds(new Set(photos.filter((photo) => !onDevice.has(photo.id)).map((p) => p.id)));
+    const missing = photos.filter((photo) => !onDevice.has(photo.id)).map((p) => p.id);
+    setSelectedIds(new Set(missing));
+    setPreselectedCount(missing.length);
     setMode('selecting');
   }, [album, mode, photos]);
 
@@ -76,6 +80,7 @@ export function useDownloadSelection(album: Album | null, photos: AlbumPhoto[]) 
   return {
     mode,
     selectedIds,
+    preselectedCount,
     overlay,
     start,
     cancel,

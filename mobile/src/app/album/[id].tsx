@@ -141,6 +141,29 @@ export default function AlbumScreen() {
           <Text style={styles.period}>{formatAlbumRange(album)}</Text>
         </View>
       )}
+      {/* En sélection : bandeau qui explique ce qui a été pré-coché. */}
+      {selecting && (
+        <Animated.View entering={FadeIn.duration(200)} style={styles.banner}>
+          <View style={styles.bannerIcon}>
+            <SymbolView
+              name={
+                download.preselectedCount > 0
+                  ? { ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }
+                  : { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' }
+              }
+              size={18}
+              weight="bold"
+              tintColor={Palette.pink}
+              fallback={<Text style={styles.bannerIconFallback}>✦</Text>}
+            />
+          </View>
+          <Text style={styles.bannerText}>
+            {download.preselectedCount > 0
+              ? "On t'a pré-sélectionné les photos qui n'ont pas encore été enregistrées sur ce téléphone."
+              : 'Tu as déjà toutes les photos sur ce téléphone. Coche celles que tu veux enregistrer à nouveau.'}
+          </Text>
+        </Animated.View>
+      )}
     </View>
   );
 
@@ -428,6 +451,41 @@ const styles = StyleSheet.create({
   albumTitle: {
     alignItems: 'center',
     gap: Spacing.half,
+  },
+  /** Bandeau d'information : carte blanche arrondie, icône rose, texte muted. */
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two + Spacing.one,
+    // Sous le bandeau : padding bas de l'en-tête (16) + espacement de la grille (8) = 24.
+    // Au-dessus : gap de l'en-tête (16) + cette marge (4) = 20, car la ligne de la date
+    // garde ~4 pt vides sous ses lettres : à l'œil les deux marges sont égales.
+    marginTop: Spacing.one,
+    paddingVertical: Spacing.two + Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radii.tile,
+    backgroundColor: Palette.card,
+  },
+  bannerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerIconFallback: {
+    color: Palette.pink,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  bannerText: {
+    flex: 1,
+    color: Palette.textMuted,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '600',
   },
   albumName: {
     color: Palette.text,
