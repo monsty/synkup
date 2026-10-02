@@ -40,13 +40,18 @@ export async function pickPhotosFromGallery(): Promise<GalleryPhoto[]> {
   }));
 }
 
-/** Ouvre le sélecteur natif pour une seule image, recadrée en carré. Null si annulé. */
-export async function pickSquareImage(): Promise<string | null> {
+/**
+ * Ouvre le sélecteur natif pour une seule image (photo de profil). Null si annulé.
+ * Pas de recadrage : sur iOS, `allowsEditing` bascule sur l'ancien contrôleur photo, bien
+ * plus lent à s'ouvrir que le sélecteur moderne. L'avatar est de toute façon affiché en rond
+ * avec un cadrage centré.
+ */
+export async function pickSingleImage(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.9,
+    allowsMultipleSelection: false,
+    quality: 0.8,
+    exif: false,
   });
   if (result.canceled) return null;
   return result.assets[0]?.uri ?? null;

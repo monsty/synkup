@@ -18,7 +18,7 @@ import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
 import { albumApi } from '@/services/album-api';
-import { pickSquareImage } from '@/services/photo-picker';
+import { pickSingleImage } from '@/services/photo-picker';
 import type { Profile, ProfileUpdate } from '@/services/profile-api';
 
 const AVATAR_SIZE = 112;
@@ -160,7 +160,7 @@ function ProfileForm({ profile, stats, saving, onSave, onToast }: ProfileFormPro
     avatarUri !== profile.avatarUri;
 
   const changeAvatar = async () => {
-    const uri = await pickSquareImage();
+    const uri = await pickSingleImage();
     if (uri) setAvatarUri(uri);
   };
 
