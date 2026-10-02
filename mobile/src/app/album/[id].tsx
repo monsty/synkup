@@ -146,13 +146,15 @@ export default function AlbumScreen() {
 
   const empty =
     status === 'loading' ? undefined : status === 'error' ? (
-      <Text style={[styles.emptyText, styles.empty]}>Impossible de charger l&apos;album.</Text>
+      <EmptyState emoji="😶‍🌫️" title="Oups" body="Impossible de charger l'album." />
     ) : status === 'not-found' ? (
-      <Text style={[styles.emptyText, styles.empty]}>Cet album n&apos;existe plus.</Text>
+      <EmptyState emoji="🫥" title="Album introuvable" body="Cet album n'existe plus." />
     ) : (
-      <Text style={[styles.emptyText, styles.empty]}>
-        Aucune photo pour le moment. Ajoute les tiennes avec le bouton +.
-      </Text>
+      <EmptyState
+        emoji="📸"
+        title="Aucune photo pour le moment"
+        body="Sois la première personne à dégainer : ajoute les tiennes avec le bouton +"
+      />
     );
 
   return (
@@ -243,6 +245,21 @@ export default function AlbumScreen() {
           onClose={() => setViewer(null)}
         />
       )}
+    </View>
+  );
+}
+
+type EmptyStateProps = { emoji: string; title: string; body: string };
+
+/** État vide centré dans l'espace restant sous l'en-tête. */
+function EmptyState({ emoji, title, body }: EmptyStateProps) {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyEmojiWrap}>
+        <Text style={styles.emptyEmoji}>{emoji}</Text>
+      </View>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyBody}>{body}</Text>
     </View>
   );
 }
@@ -426,9 +443,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  empty: {
-    marginTop: Spacing.six,
-  },
   loadingSpinner: {
     transform: [{ scale: 1.4 }],
   },
@@ -441,14 +455,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyText: {
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.five,
+    // Compense visuellement le bouton + en bas pour un centrage perçu juste.
+    paddingBottom: Spacing.five,
+  },
+  emptyEmojiWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.two,
+  },
+  emptyEmoji: {
+    fontSize: 40,
+    lineHeight: 48,
+  },
+  emptyTitle: {
+    color: Palette.text,
+    fontFamily: Fonts.rounded,
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  emptyBody: {
     color: Palette.textMuted,
     fontFamily: Fonts.rounded,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 24,
     textAlign: 'center',
-    paddingHorizontal: Spacing.four,
   },
   fabWrap: {
     position: 'absolute',

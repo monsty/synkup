@@ -222,77 +222,82 @@ export function PhotoViewer({ photos, initialIndex, onClose }: Props) {
   const overlayStyle = useAnimatedStyle(() => ({ opacity: overlayOpacity.get() }));
 
   return (
+    // Reanimated : une animation d'entrée et un style animé ne doivent pas porter sur le même
+    // nœud (l'une écraserait l'autre), d'où le conteneur dédié à l'entrée.
     <Animated.View
       entering={FadeIn.duration(OVERLAY_FADE_MS)}
       pointerEvents={closing ? 'none' : 'auto'}
-      style={[StyleSheet.absoluteFill, overlayStyle]}>
-      <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
-        <BlurView
-          intensity={70}
-          tint="light"
-          experimentalBlurMethod="dimezisBlurView"
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={[StyleSheet.absoluteFill, styles.frost]} />
-      </Animated.View>
+      style={StyleSheet.absoluteFill}>
+      <Animated.View style={[StyleSheet.absoluteFill, overlayStyle]}>
+        <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+          <BlurView
+            intensity={70}
+            tint="light"
+            blurMethod="dimezisBlurView"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[StyleSheet.absoluteFill, styles.frost]} />
+        </Animated.View>
 
-      {/* Les gestes couvrent tout l'écran. Le ✕ est géré par le tap (qui annule les boutons natifs). */}
-      <GestureDetector gesture={gestures}>
-        <View
-          style={[
-            styles.container,
-            { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, Spacing.three) },
-          ]}>
-          <Animated.View style={[styles.header, backdropStyle]}>
-            <View style={styles.closeButton}>
-              <SymbolView
-                name={{ ios: 'xmark', android: 'close', web: 'close' }}
-                size={16}
-                weight="heavy"
-                tintColor={Palette.text}
-                fallback={<Text style={styles.closeFallback}>✕</Text>}
-              />
-            </View>
-            <Text style={styles.brand}>Synkup</Text>
-            <View style={styles.pill}>
-              <Text style={styles.pillValue}>{index + 1}</Text>
-              <Text style={styles.pillUnit}>/ {photos.length}</Text>
-            </View>
-          </Animated.View>
-
+        {/* Les gestes couvrent tout l'écran. Le ✕ est géré par le tap (qui annule les boutons natifs). */}
+        <GestureDetector gesture={gestures}>
           <View
-            style={styles.body}
-            onLayout={(event) => {
-              // Enfant direct du conteneur du détecteur : même repère que les événements.
-              const { x, y, width: w, height: h } = event.nativeEvent.layout;
-              centerX.set(x + w / 2);
-              centerY.set(y + h / 2);
-            }}>
-            {photo && (
-              <Animated.View
-                entering={ZoomIn.duration(180)}
-                style={[styles.card, { width: cardWidth, height: cardHeight }, cardStyle]}>
-                <Image
-                  source={{ uri: photo.uri }}
-                  contentFit="cover"
-                  transition={100}
-                  cachePolicy="memory-disk"
-                  style={StyleSheet.absoluteFill}
+            style={[
+              styles.container,
+              { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, Spacing.three) },
+            ]}>
+            <Animated.View style={[styles.header, backdropStyle]}>
+              <View style={styles.closeButton}>
+                <SymbolView
+                  name={{ ios: 'xmark', android: 'close', web: 'close' }}
+                  size={16}
+                  weight="heavy"
+                  tintColor={Palette.text}
+                  fallback={<Text style={styles.closeFallback}>✕</Text>}
                 />
-              </Animated.View>
-            )}
-          </View>
-
-          <Animated.View style={[styles.captionRow, backdropStyle]}>
-            {photo && (
-              <View style={styles.caption}>
-                <Text style={styles.captionAuthor}>{photo.authorName}</Text>
-                <Text style={styles.captionText}>{formatPhotoDate(photo.takenAt)}</Text>
               </View>
-            )}
-          </Animated.View>
-        </View>
-      </GestureDetector>
+              <Text style={styles.brand}>Synkup</Text>
+              <View style={styles.pill}>
+                <Text style={styles.pillValue}>{index + 1}</Text>
+                <Text style={styles.pillUnit}>/ {photos.length}</Text>
+              </View>
+            </Animated.View>
+
+            <View
+              style={styles.body}
+              onLayout={(event) => {
+                // Enfant direct du conteneur du détecteur : même repère que les événements.
+                const { x, y, width: w, height: h } = event.nativeEvent.layout;
+                centerX.set(x + w / 2);
+                centerY.set(y + h / 2);
+              }}>
+              {photo && (
+                <Animated.View entering={ZoomIn.duration(180)}>
+                  <Animated.View
+                    style={[styles.card, { width: cardWidth, height: cardHeight }, cardStyle]}>
+                    <Image
+                      source={{ uri: photo.uri }}
+                      contentFit="cover"
+                      transition={100}
+                      cachePolicy="memory-disk"
+                      style={StyleSheet.absoluteFill}
+                    />
+                  </Animated.View>
+                </Animated.View>
+              )}
+            </View>
+
+            <Animated.View style={[styles.captionRow, backdropStyle]}>
+              {photo && (
+                <View style={styles.caption}>
+                  <Text style={styles.captionAuthor}>{photo.authorName}</Text>
+                  <Text style={styles.captionText}>{formatPhotoDate(photo.takenAt)}</Text>
+                </View>
+              )}
+            </Animated.View>
+          </View>
+        </GestureDetector>
+      </Animated.View>
     </Animated.View>
   );
 }

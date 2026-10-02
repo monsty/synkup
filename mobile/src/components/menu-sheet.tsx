@@ -2,7 +2,11 @@ import { BlurView } from 'expo-blur';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { useEffect, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  Pressable as SheetPressable,
+} from 'react-native-gesture-handler';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -133,7 +137,7 @@ export function MenuSheet({ onSelect, onLogout, onClose }: Props) {
         <BlurView
           intensity={40}
           tint="light"
-          experimentalBlurMethod="dimezisBlurView"
+          blurMethod="dimezisBlurView"
           style={StyleSheet.absoluteFill}
         />
         <View style={[StyleSheet.absoluteFill, styles.frost]} />
@@ -157,8 +161,9 @@ export function MenuSheet({ onSelect, onLogout, onClose }: Props) {
           <View style={styles.handle} />
 
           <View style={styles.items}>
+            {/* Pressable de Gesture Handler : un glissement commencé sur un bouton ferme quand même la feuille. */}
             {ITEMS.map((item, index) => (
-              <Pressable
+              <SheetPressable
                 key={item.key}
                 accessibilityRole="button"
                 onPress={() => onSelect(item.key)}
@@ -184,11 +189,11 @@ export function MenuSheet({ onSelect, onLogout, onClose }: Props) {
                   tintColor={Palette.textMuted}
                   fallback={<Text style={styles.itemChevronFallback}>›</Text>}
                 />
-              </Pressable>
+              </SheetPressable>
             ))}
           </View>
 
-          <Pressable
+          <SheetPressable
             accessibilityRole="button"
             onPress={onLogout}
             style={({ pressed }) => [styles.logout, pressed && styles.itemPressed]}>
@@ -204,7 +209,7 @@ export function MenuSheet({ onSelect, onLogout, onClose }: Props) {
               fallback={<Text style={styles.logoutFallback}>⇥</Text>}
             />
             <Text style={styles.logoutLabel}>Se déconnecter</Text>
-          </Pressable>
+          </SheetPressable>
         </Animated.View>
       </GestureDetector>
     </View>

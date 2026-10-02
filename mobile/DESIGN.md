@@ -18,7 +18,7 @@ Thème clair fixe, « fun » et très arrondi. Les tokens vivent dans `src/const
 | `mintGlass`      | `rgba(159,232,216,0.35)` | Teinte menthe des surfaces Liquid Glass                                                                                   |
 | `pinkGlass`      | `rgba(255,45,138,0.6)`   | Teinte rose des surfaces Liquid Glass (bouton +)                                                                          |
 | `onMint`         | `#14201C`                | Texte sur fond menthe                                                                                                     |
-| `pink`           | `#FF2D8A`                | Marque « Synkup », icônes d'action, spinners, tampon PASSER                                                               |
+| `pink`           | `#FF2D8A`                | Marque « Synkup », boutons d'action (fond) avec icône ou texte blanc, icônes sur bouton gris, spinners, tampon ENVOYER   |
 | `cardBackground` | `#E6E6EB`                | Placeholder derrière une photo qui charge                                                                                 |
 
 Règles : la marque est toujours en rose. L'action principale est un bouton rose (rond ou
@@ -73,8 +73,14 @@ rose à la place de l'icône pendant l'action.
   séparateurs fins. En bas, pilule grise « Se déconnecter » en rose avec icône. Fermeture : tap
   sur le fond, glissement vers le bas (90 px ou vélocité 700), retour Android. Entrée en ressort
   sans rebond, sortie 200 ms.
-- Album (`/album/[id]`) : chevron retour à gauche de la marque. Le contenu défile sous la barre
-  de statut, laissée transparente et sans voile. Fond `background`, grille 3 colonnes, espacement 8, marge latérale 16, tuiles
+- Album (`/album/[id]`) : chevron retour à gauche de la marque. Pendant le chargement, pas
+  d'étiquette de compteur et un spinner rose centré sur tout l'écran (taille small agrandie à
+  1,4, soit ~28, la même que le pull-to-refresh), l'en-tête restant visible. Album vide :
+  `EmptyState` centré dans l'espace restant sous l'en-tête (remonté de 32 pour compenser le
+  bouton +) : émoji dans un rond gris de 88, titre 22 gras, phrase en muted à la deuxième
+  personne et au ton léger (« Sois la première personne à dégainer : ajoute les tiennes avec le
+  bouton + »). Erreur et album introuvable réutilisent la même présentation. Le contenu défile
+  sous la barre de statut, laissée transparente et sans voile. Fond `background`, grille 3 colonnes, espacement 8, marge latérale 16, tuiles
   carrées arrondies (pression : opacité 0,85, échelle 0,97). Bouton + flottant rond rose, icône
   blanche, centré en bas : en Liquid Glass (`GlassView` d'`expo-glass-effect`, style `regular`,
   teinte `pinkGlass`, sans `isInteractive` qui étire le verre sous le doigt) sur iOS 26+, sinon
@@ -100,7 +106,7 @@ rose à la place de l'icône pendant l'action.
 - Tri (swipe) : modale transparente en fondu, `BlurView` clair (intensité 70) + voile blanc
   à 30 % par-dessus l'album. Carte plein cadre arrondie 40 avec la date de la photo en pilule
   sombre centrée en bas. Actions : rond gris ✕ rose, puis pilule rose « Envoyer » avec
-  icône d'upload blanche. Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
+  icône nuage-flèche blanche. Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
   qu'une fois le nombre connu.
 - Visualiseur photo : calque rendu par-dessus l'album (pas une route : ouverture et fermeture
   sont un changement d'état, fondu 120 ms, pour ne jamais bloquer les touches). Même fond dépoli. En-tête ✕ + marque + étiquette « 3 / 32 ». Photo dans une
@@ -121,12 +127,12 @@ rose à la place de l'icône pendant l'action.
 - Pression sur un bouton : opacité 0,8 et échelle 0,95.
 - Visualiseur : fermeture après 120 px ou vélocité 800 (envol 180 ms, calque en fondu 120 ms,
   fermeture lancée dès le seuil). Navigation après 80 px ou vélocité 600 (sortie 150 ms,
-  entrée 180 ms par le côté opposé). Entrée de la carte en `ZoomIn` 220 ms.
+  entrée 180 ms par le côté opposé). Entrée de la carte en `ZoomIn` 180 ms.
 
 ## Icônes
 
 `expo-symbols` avec un nom par plateforme (`{ ios, android, web }`) et un `fallback` texte.
-Poids `bold` ou `heavy`. Envoyer : `square.and.arrow.up.fill` / `upload`.
+Poids `bold` ou `heavy`. Envoyer : `icloud.and.arrow.up` / `cloud_upload` (nuage avec flèche montante, trait fin `semibold`).
 Passer et fermer : `xmark` / `close`. Ajouter : `plus` / `add`.
 
 ## Pièges connus
@@ -137,4 +143,19 @@ Passer et fermer : `xmark` / `close`. Ajouter : `plus` / `add`.
   `SafeAreaView` local, sinon la première frame s'affiche sans marge haute.
 - Pas d'ombre ni d'opacité sur le parent d'une `GlassView` : ça casse l'effet de verre.
 - Pour un fond « tap pour fermer », faire du fond un `Pressable` parent du contenu plutôt
-  qu'un calque absolu derrière lui.
+  qu'un calque absolu derrière lui. Si des gestes couvrent aussi le fond, passer par un
+  `Gesture.Tap` : un geste actif annule les touches des boutons natifs.
+- Le visualiseur et le menu sont des calques dans l'écran, pas des routes : une modale de
+  navigation bloque les touches pendant ses transitions et paraît lente.
+- Pour qu'une liste défile sous la barre de statut, utiliser
+  `contentInsetAdjustmentBehavior="automatic"` sur iOS (position initiale et pull-to-refresh
+  gérés par le système) et un `paddingTop` + `progressViewOffset` sur Android. Un `contentInset`
+  posé à la main ne s'applique pas correctement sur un écran empilé.
+- Dans un calque piloté par un `Gesture.Pan` (feuille de menu), utiliser le `Pressable` de
+  `react-native-gesture-handler` pour les boutons internes : celui de React Native avale le
+  début du glissement.
+- Reanimated : ne pas poser une animation d'entrée/sortie (`entering`/`exiting`) et un style
+  animé (`useAnimatedStyle`) sur le même nœud, l'une écrase l'autre ; envelopper dans une vue
+  dédiée. Sur `expo-blur`, la prop s'appelle `blurMethod` (`experimentalBlurMethod` est dépréciée).
+- Hermes sous Expo Go n'a pas `Intl.RelativeTimeFormat` : les dates relatives sont écrites à la
+  main dans `src/types/album.ts`.

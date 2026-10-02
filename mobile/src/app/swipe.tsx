@@ -40,7 +40,7 @@ export default function SwipeScreen() {
       <BlurView
         intensity={70}
         tint="light"
-        experimentalBlurMethod="dimezisBlurView"
+        blurMethod="dimezisBlurView"
         style={StyleSheet.absoluteFill}
       />
       <View style={[StyleSheet.absoluteFill, styles.frost]} />

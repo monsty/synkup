@@ -123,6 +123,8 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: SIDE_PADDING,
     gap: GAP,
+    // Laisse l'état vide occuper tout l'espace restant sous l'en-tête pour s'y centrer.
+    flexGrow: 1,
   },
   row: {
     gap: GAP,

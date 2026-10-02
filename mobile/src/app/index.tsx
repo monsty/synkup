@@ -28,10 +28,8 @@ export default function AlbumsScreen() {
   const openAlbum = (album: Album) =>
     router.push({ pathname: '/album/[id]', params: { id: album.id } });
 
-  const onMenuSelect = (key: MenuItemKey) => {
-    // POC : les écrans n'existent pas encore.
-    console.log('[menu]', key);
-  };
+  // POC : les écrans du menu n'existent pas encore, la sélection ne fait rien.
+  const onMenuSelect = (_key: MenuItemKey) => {};
 
   const header = (
     <View style={styles.header}>
@@ -104,7 +102,7 @@ export default function AlbumsScreen() {
         <MenuSheet
           key={menuKey}
           onSelect={onMenuSelect}
-          onLogout={() => console.log('[menu] logout')}
+          onLogout={() => {}}
           onClose={() => setMenuKey(null)}
         />
       )}

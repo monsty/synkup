@@ -201,12 +201,12 @@ export function SwipeDeck({ photos, onDecide }: SwipeDeckProps) {
           <Text style={styles.sendLabel}>Envoyer</Text>
           <SymbolView
             name={{
-              ios: 'square.and.arrow.up.fill',
-              android: 'upload',
-              web: 'upload',
+              ios: 'icloud.and.arrow.up',
+              android: 'cloud_upload',
+              web: 'cloud_upload',
             }}
-            size={24}
-            weight="bold"
+            size={26}
+            weight="semibold"
             tintColor={Palette.onPhoto}
             fallback={<Text style={styles.sendFallback}>↑</Text>}
           />
