@@ -141,9 +141,7 @@ export default function AlbumScreen() {
   );
 
   const empty =
-    status === 'loading' ? (
-      <ActivityIndicator style={styles.empty} color={Palette.pink} />
-    ) : status === 'error' ? (
+    status === 'loading' ? undefined : status === 'error' ? (
       <Text style={[styles.emptyText, styles.empty]}>Impossible de charger l&apos;album.</Text>
     ) : status === 'not-found' ? (
       <Text style={[styles.emptyText, styles.empty]}>Cet album n&apos;existe plus.</Text>
@@ -224,6 +222,14 @@ export default function AlbumScreen() {
           </Animated.View>
         </Pressable>
       )}
+      {/* Chargement : loader centré sur tout l'écran, l'en-tête reste visible derrière. */}
+      {status === 'loading' && (
+        <View pointerEvents="none" style={styles.loadingOverlay}>
+          {/* iOS ne propose que small (20) et large (36) : on agrandit le small pour un entre-deux. */}
+          <ActivityIndicator size="small" color={Palette.pink} style={styles.loadingSpinner} />
+        </View>
+      )}
+
       <DownloadModal overlay={download.overlay} />
       {viewer && (
         <PhotoViewer
@@ -419,6 +425,18 @@ const styles = StyleSheet.create({
   },
   empty: {
     marginTop: Spacing.six,
+  },
+  loadingSpinner: {
+    transform: [{ scale: 1.4 }],
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
     color: Palette.textMuted,
