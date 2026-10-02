@@ -49,14 +49,31 @@ Tout est gras.
 
 ## Structure des écrans
 
-En-tête commun : rangée avec la marque à gauche et une pilule d'info à droite
-(nombre + unité). Un écran modal ajoute un rond ✕ gris à gauche de la marque.
-Sous la rangée, un sous-titre centré en muted. Un bouton d'action secondaire se place à
-droite de la pilule : rond gris 40 avec icône rose (ex. téléchargement, `arrow.down.to.line`
-/ `download`), spinner rose à la place de l'icône pendant l'action.
+En-tête commun : rangée avec la marque à gauche et une pilule d'info ou un bouton rond à
+droite. Un écran enfant ajoute un rond gris à gauche de la marque : ✕ pour une modale,
+chevron gauche pour un écran empilé (album). Sous la rangée, un titre centré en gras (26) et
+un sous-titre centré en muted. Un bouton d'action secondaire se place à droite de la pilule :
+rond gris 40 avec icône rose (ex. téléchargement, `arrow.down.to.line` / `download`), spinner
+rose à la place de l'icône pendant l'action.
 
-- Album : le contenu défile sous la barre de statut, laissée transparente et sans voile.
-  Fond `background`, grille 3 colonnes, espacement 8, marge latérale 16, tuiles
+- Mes albums (accueil) : marque + bouton menu rond gris (`line.3.horizontal` / `menu`) à
+  droite, titre « Mes albums », sous-titre « N albums partagés avec toi ». Une carte par ligne
+  (`AlbumCard`) : fond `card` blanc, arrondi 40, ombre légère (opacité 0,08, rayon 16).
+  Couverture 16:10 avec deux pilules sombres translucides en haut : l'état à gauche (« En
+  cours » en rose avec un point menthe, « À venir », « Terminé ») et le nombre de photos à
+  droite. Dessous : nom (22, 800), période + état relatif en muted (« Se termine dans 3 jours »,
+  « Terminé avant-hier », « Commence le 17 oct. »), puis les membres en avatars chevauchés
+  (28, bord `card` 2 px, max 4 puis « +N ») avec « N personnes » et un chevron rose dans un
+  rond gris. Sans couverture : icône et « Aucune photo pour le moment » sur `cardBackground`.
+  Pression : opacité 0,9, échelle 0,985. Tri des albums : en cours, à venir, terminés.
+- Menu (`MenuSheet`) : feuille coulissante par le bas en calque (pas une route), fond dépoli
+  clair à 45 %, carte `card` arrondie 40 à 8 px des bords avec poignée. Liste sur fond
+  `background` arrondie 24 : rond blanc avec icône rose, libellé 17 gras, chevron muted,
+  séparateurs fins. En bas, pilule grise « Se déconnecter » en rose avec icône. Fermeture : tap
+  sur le fond, glissement vers le bas (90 px ou vélocité 700), retour Android. Entrée en ressort
+  sans rebond, sortie 200 ms.
+- Album (`/album/[id]`) : chevron retour à gauche de la marque. Le contenu défile sous la barre
+  de statut, laissée transparente et sans voile. Fond `background`, grille 3 colonnes, espacement 8, marge latérale 16, tuiles
   carrées arrondies (pression : opacité 0,85, échelle 0,97). Bouton + flottant rond rose, icône
   blanche, centré en bas : en Liquid Glass (`GlassView` d'`expo-glass-effect`, style `regular`,
   teinte `pinkGlass`, sans `isInteractive` qui étire le verre sous le doigt) sur iOS 26+, sinon

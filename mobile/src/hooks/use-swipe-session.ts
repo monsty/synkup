@@ -19,7 +19,7 @@ export type SwipeSessionStatus =
  * Pilote une session de tri : permission galerie, chargement des photos de la période
  * de l'album jamais proposées, et enregistrement des décisions (envoi ou passe).
  */
-export function useSwipeSession() {
+export function useSwipeSession(albumId: string) {
   const [album, setAlbum] = useState<Album | null>(null);
   const [permission, requestPermission] = usePermissions({ granularPermissions: ['photo'] });
   const [candidates, setCandidates] = useState<GalleryPhoto[] | null>(null);
@@ -29,10 +29,13 @@ export function useSwipeSession() {
 
   useEffect(() => {
     albumApi
-      .getDefaultAlbum()
-      .then(setAlbum)
+      .getAlbum(albumId)
+      .then((result) => {
+        if (result) setAlbum(result);
+        else setError('Album introuvable.');
+      })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, []);
+  }, [albumId]);
 
   useEffect(() => {
     if (!permission || permission.granted || hasAskedPermission.current) return;

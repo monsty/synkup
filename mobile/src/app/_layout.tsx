@@ -15,6 +15,7 @@ export default function RootLayout() {
         <AnimatedSplashOverlay />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="album/[id]" />
           <Stack.Screen
             name="swipe"
             options={{ presentation: 'transparentModal', animation: 'fade' }}

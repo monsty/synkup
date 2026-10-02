@@ -76,6 +76,8 @@ export const MaxContentWidth = 800;
  */
 export const Palette = {
   background: '#F4F4F7',
+  /** Fond d'une carte posée sur `background` (liste des albums, menu). */
+  card: '#FFFFFF',
   surface: 'rgba(27, 27, 31, 0.07)',
   surfaceStrong: 'rgba(27, 27, 31, 0.12)',
   /** Équivalent opaque de `surface` sur `background`, pour un élément posé sur des photos. */

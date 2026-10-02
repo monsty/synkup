@@ -1,10 +1,71 @@
+/** Une personne ayant accès à un album. */
+export type AlbumMember = {
+  id: string;
+  name: string;
+  avatarUri: string;
+};
+
 /** Un album partagé, borné dans le temps. Les dates sont au format YYYY-MM-DD (local). */
 export type Album = {
   id: string;
   name: string;
   startDate: string;
   endDate: string;
+  /** Photo de couverture (en général la dernière ajoutée). */
+  coverUri: string | null;
+  members: AlbumMember[];
+  photoCount: number;
 };
+
+export type AlbumStatus = 'upcoming' | 'active' | 'ended';
+
+/** Où en est l'album par rapport à aujourd'hui. */
+export function getAlbumStatus(album: Album, now = new Date()): AlbumStatus {
+  const { start, end } = getAlbumRange(album);
+  if (now < start) return 'upcoming';
+  if (now > end) return 'ended';
+  return 'active';
+}
+
+/**
+ * « aujourd'hui », « demain », « hier », « dans 3 jours », « il y a 5 jours ».
+ * Écrit à la main : Intl.RelativeTimeFormat n'est pas disponible dans Hermes sous Expo Go.
+ */
+function relativeDays(days: number): string {
+  if (days === 0) return "aujourd'hui";
+  if (days === 1) return 'demain';
+  if (days === -1) return 'hier';
+  if (days === 2) return 'après-demain';
+  if (days === -2) return 'avant-hier';
+  return days > 0 ? `dans ${days} jours` : `il y a ${-days} jours`;
+}
+
+function daysBetween(from: Date, to: Date): number {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const a = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+  const b = new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime();
+  return Math.round((b - a) / dayMs);
+}
+
+/**
+ * Phrase d'état courte pour la liste des albums.
+ * Ex. « Se termine dans 3 jours », « Terminé avant-hier », « Commence le 17 oct. »
+ */
+export function describeAlbumStatus(album: Album, now = new Date()): string {
+  const { start, end } = getAlbumRange(album);
+  const status = getAlbumStatus(album, now);
+  if (status === 'active') {
+    return `Se termine ${relativeDays(daysBetween(now, end))}`;
+  }
+  if (status === 'upcoming') {
+    const days = daysBetween(now, start);
+    if (days <= 7) return `Commence ${relativeDays(days)}`;
+    return `Commence le ${shortDate.format(start)}`;
+  }
+  const days = daysBetween(end, now);
+  if (days <= 7) return `Terminé ${relativeDays(-days)}`;
+  return `Terminé le ${shortDate.format(end)}`;
+}
 
 /** Une photo déjà présente dans l'album partagé. */
 export type AlbumPhoto = {

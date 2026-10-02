@@ -3,16 +3,17 @@ import { useCallback, useEffect, useState } from 'react';
 import { albumApi } from '@/services/album-api';
 import type { Album, AlbumPhoto } from '@/types/album';
 
-type Status = 'loading' | 'ready' | 'error';
+type Status = 'loading' | 'ready' | 'error' | 'not-found';
 
-async function fetchAlbumWithPhotos() {
-  const album = await albumApi.getDefaultAlbum();
-  const photos = await albumApi.getPhotos(album.id);
+async function fetchAlbumWithPhotos(albumId: string) {
+  const album = await albumApi.getAlbum(albumId);
+  if (!album) return null;
+  const photos = await albumApi.getPhotos(albumId);
   return { album, photos };
 }
 
-/** Album par défaut + ses photos, mis à jour automatiquement après un upload. */
-export function useAlbum() {
+/** Un album et ses photos, mis à jour automatiquement après un upload. */
+export function useAlbum(albumId: string) {
   const [album, setAlbum] = useState<Album | null>(null);
   const [photos, setPhotos] = useState<AlbumPhoto[]>([]);
   const [status, setStatus] = useState<Status>('loading');
@@ -20,9 +21,13 @@ export function useAlbum() {
 
   useEffect(() => {
     let active = true;
-    fetchAlbumWithPhotos()
+    fetchAlbumWithPhotos(albumId)
       .then((result) => {
         if (!active) return;
+        if (!result) {
+          setStatus('not-found');
+          return;
+        }
         setAlbum(result.album);
         setPhotos(result.photos);
         setStatus('ready');
@@ -31,17 +36,23 @@ export function useAlbum() {
         if (active) setStatus('error');
       });
 
-    const unsubscribe = albumApi.subscribe(setPhotos);
+    const unsubscribe = albumApi.subscribe((changedAlbumId, nextPhotos) => {
+      if (changedAlbumId === albumId) setPhotos(nextPhotos);
+    });
     return () => {
       active = false;
       unsubscribe();
     };
-  }, []);
+  }, [albumId]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const result = await fetchAlbumWithPhotos();
+      const result = await fetchAlbumWithPhotos(albumId);
+      if (!result) {
+        setStatus('not-found');
+        return;
+      }
       setAlbum(result.album);
       setPhotos(result.photos);
       setStatus('ready');
@@ -50,7 +61,7 @@ export function useAlbum() {
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [albumId]);
 
   return { album, photos, status, refreshing, refresh };
 }

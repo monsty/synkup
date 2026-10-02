@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { SymbolView } from 'expo-symbols';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { useSwipeSession } from '@/hooks/use-swipe-session';
 import { formatAlbumRange } from '@/types/album';
 
 export default function SwipeScreen() {
+  const { albumId } = useLocalSearchParams<{ albumId: string }>();
   const {
     album,
     status,
@@ -21,7 +22,7 @@ export default function SwipeScreen() {
     uploadsInFlight,
     canAskPermissionAgain,
     requestPermission,
-  } = useSwipeSession();
+  } = useSwipeSession(albumId);
 
   // Ouvert via deep link, l'écran peut être seul dans la pile : on retombe alors sur l'album.
   const close = () => {

@@ -49,10 +49,9 @@ export function PhotoGrid({
   const { width } = useWindowDimensions();
   const tileSize = (width - SIDE_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
-  // Le contenu défile sous la barre de statut. Sur iOS on réserve la place par un inset natif :
-  // le loader du pull-to-refresh s'y place de lui-même et son seuil reste celui du système.
-  // Android n'a pas d'inset : padding en haut et loader décalé d'autant.
-  const iosInset = Platform.OS === 'ios' ? topInset : 0;
+  // Le contenu défile sous la barre de statut. Sur iOS, le système ajuste lui-même les marges
+  // de la liste aux zones sûres (position initiale et loader du pull-to-refresh compris).
+  // Android n'a pas cet ajustement : padding en haut et loader décalé d'autant.
   const androidTopPadding = Platform.OS === 'ios' ? 0 : topInset;
 
   return (
@@ -61,10 +60,7 @@ export function PhotoGrid({
       keyExtractor={(photo) => photo.id}
       numColumns={COLUMNS}
       columnWrapperStyle={styles.row}
-      contentInset={{ top: iosInset }}
-      contentOffset={{ x: 0, y: -iosInset }}
-      scrollIndicatorInsets={{ top: iosInset }}
-      contentInsetAdjustmentBehavior="never"
+      contentInsetAdjustmentBehavior="automatic"
       contentContainerStyle={[
         styles.content,
         { paddingTop: androidTopPadding, paddingBottom: bottomInset },
