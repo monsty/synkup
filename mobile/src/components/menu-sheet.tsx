@@ -44,7 +44,7 @@ const ITEMS: MenuItem[] = [
   },
   {
     key: 'settings',
-    label: 'Paramétrages',
+    label: 'Paramètres',
     icon: { ios: 'gearshape', android: 'settings', web: 'settings' },
     fallback: '⚙',
   },
