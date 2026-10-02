@@ -71,8 +71,8 @@ rose à la place de l'icône pendant l'action.
   sous-titre centré. Photo de profil ronde de 112 au centre (bord `card` 4, pastille rose 36
   avec appareil photo en bas à droite, « Touche la photo pour la changer » dessous ; le tap
   ouvre le sélecteur natif en recadrage carré). Pour habiller la page sans l'alourdir : une
-  carte `card` arrondie 18 avec trois chiffres séparés par des filets (albums, photos
-  partagées, membre depuis). Formulaire : deux `TextField` (surnom, email) puis pilule rose
+  carte `card` arrondie 18 avec deux chiffres séparés par un filet (albums, photos
+  partagées). Formulaire : deux `TextField` (surnom, email) puis pilule rose
   « Enregistrer » 56 pleine largeur (ombre seulement quand il y a quelque chose à enregistrer).
   Retour par un toast sombre en haut, sous la barre de statut (« Profil enregistré », 2,2 s).
 - `TextField` : libellé en capitales 13 muted au-dessus, carte `card` arrondie 18 de 56 de

@@ -27,8 +27,6 @@ const NICKNAME_MAX = 24;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TOAST_MS = 2200;
 
-const memberSinceFormat = new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' });
-
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { profile, status, saving, save } = useProfile();
@@ -215,11 +213,6 @@ function ProfileForm({ profile, stats, saving, onSave, onToast }: ProfileFormPro
         <Stat value={stats ? String(stats.albums) : '–'} label="albums" />
         <View style={styles.statDivider} />
         <Stat value={stats ? String(stats.photosShared) : '–'} label="photos partagées" />
-        <View style={styles.statDivider} />
-        <Stat
-          value={memberSinceFormat.format(new Date(profile.memberSince))}
-          label="membre depuis"
-        />
       </View>
 
       <View style={styles.form}>
