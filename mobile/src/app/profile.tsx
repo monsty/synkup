@@ -1,17 +1,11 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PageLoader } from '@/components/page-loader';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
@@ -77,8 +71,6 @@ export default function ProfileScreen() {
             <Text style={styles.subtitle}>C&apos;est toi que tes amis verront dans les albums</Text>
           </View>
 
-          {status === 'loading' && <ActivityIndicator style={styles.loader} color={Palette.pink} />}
-
           {status === 'error' && (
             <Text style={styles.errorText}>Impossible de charger ton profil.</Text>
           )}
@@ -94,6 +86,8 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
       </View>
+
+      {status === 'loading' && <PageLoader />}
 
       {toast && (
         <Animated.View
@@ -294,9 +288,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  loader: {
-    marginTop: Spacing.six,
   },
   errorText: {
     color: Palette.textMuted,

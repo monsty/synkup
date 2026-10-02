@@ -13,6 +13,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProgressModal } from '@/components/progress-modal';
+import { PageLoader } from '@/components/page-loader';
 import { PhotoGrid } from '@/components/photo-grid';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
@@ -245,13 +246,7 @@ export default function AlbumScreen() {
           </Animated.View>
         </Pressable>
       )}
-      {/* Chargement : loader centré sur tout l'écran, l'en-tête reste visible derrière. */}
-      {status === 'loading' && (
-        <View pointerEvents="none" style={styles.loadingOverlay}>
-          {/* iOS ne propose que small (20) et large (36) : on agrandit le small pour un entre-deux. */}
-          <ActivityIndicator size="small" color={Palette.pink} style={styles.loadingSpinner} />
-        </View>
-      )}
+      {status === 'loading' && <PageLoader />}
 
       <ProgressModal overlay={download.overlay} />
       {viewer && (
@@ -467,18 +462,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  loadingSpinner: {
-    transform: [{ scale: 1.4 }],
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   emptyState: {
     flex: 1,

@@ -16,7 +16,7 @@ Thème clair fixe, « fun » et très arrondi. Les tokens vivent dans `src/const
 | `onPhoto`        | `#FFFFFF`                | Texte posé sur une photo                                                                                                  |
 | `mint`           | `#9FE8D8`                | Action principale (envoyer, bouton +, boutons de message)                                                                 |
 | `mintGlass`      | `rgba(159,232,216,0.35)` | Teinte menthe des surfaces Liquid Glass                                                                                   |
-| `pinkGlass`      | `rgba(255,45,138,0.6)`   | Teinte rose des surfaces Liquid Glass (bouton +)                                                                          |
+| `pinkGlass`      | `rgba(255,45,138,0.85)`  | Teinte rose des surfaces Liquid Glass (bouton +)                                                                          |
 | `onMint`         | `#14201C`                | Texte sur fond menthe                                                                                                     |
 | `pink`           | `#FF2D8A`                | Marque « Synkup », boutons d'action (fond) avec icône ou texte blanc, icônes sur bouton gris, spinners, tampon ENVOYER   |
 | `cardBackground` | `#E6E6EB`                | Placeholder derrière une photo qui charge                                                                                 |
@@ -104,8 +104,9 @@ rose à la place de l'icône pendant l'action.
   sur le fond, glissement vers le bas (90 px ou vélocité 700), retour Android. Entrée en ressort
   sans rebond, sortie 200 ms.
 - Album (`/album/[id]`) : chevron retour à gauche de la marque. Pendant le chargement, pas
-  d'étiquette de compteur et un spinner rose centré sur tout l'écran (taille small agrandie à
-  1,4, soit ~28, la même que le pull-to-refresh), l'en-tête restant visible. Album vide :
+  d'étiquette de compteur et le `PageLoader` (spinner rose centré sur tout l'écran, taille
+  small agrandie à 1,4, soit ~28, la même que le pull-to-refresh), l'en-tête restant visible.
+  Même loader sur le profil et sur tout écran qui charge ses données. Album vide :
   `EmptyState` centré dans l'espace restant sous l'en-tête (remonté de 32 pour compenser le
   bouton +) : émoji dans un rond gris de 88, titre 22 gras, phrase en muted à la deuxième
   personne et au ton léger (« Sois la première personne à dégainer : ajoute les tiennes avec le

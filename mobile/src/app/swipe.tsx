@@ -176,11 +176,7 @@ export default function SwipeScreen() {
         {status === 'ready' && remaining === 0 && (
           <Message
             title="Tout est trié 🎉"
-            body={
-              album
-                ? `Aucune nouvelle photo prise entre le ${formatAlbumRange(album).replace(' → ', ' et le ')}.`
-                : 'Aucune nouvelle photo.'
-            }
+            body="Aucune nouvelle photo à envoyer."
             actionLabel="Retour à l'album"
             onAction={close}
           />

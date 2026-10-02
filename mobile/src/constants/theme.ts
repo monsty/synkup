@@ -90,7 +90,7 @@ export const Palette = {
   mintGlass: 'rgba(159, 232, 216, 0.35)',
   pink: '#FF2D8A',
   /** Teinte rose translucide pour les surfaces Liquid Glass. */
-  pinkGlass: 'rgba(255, 45, 138, 0.6)',
+  pinkGlass: 'rgba(255, 45, 138, 0.85)',
   onMint: '#14201C',
   cardBackground: '#E6E6EB',
 } as const;
