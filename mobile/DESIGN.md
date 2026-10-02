@@ -73,7 +73,8 @@ rose à la place de l'icône pendant l'action.
   Étape code : `TextField` numérique 6 chiffres avec autocomplétion du code reçu, pilule rose
   « Me connecter », lien rose « Renvoyer le code ». Chevron retour à gauche de la marque sur
   les étapes 2 et 3. Pas de mot de passe : connexion par code, Apple ou Google uniquement.
-- Mes albums (accueil) : marque + bouton menu rond gris (trois points verticaux : `ellipsis` tourné de 90° / `more_vert`) à
+- Mes albums (accueil) : bouton + flottant (`AddButton`, Liquid Glass) pour créer un album ;
+  marque + bouton menu rond gris (trois points verticaux : `ellipsis` tourné de 90° / `more_vert`) à
   droite, titre « Mes albums », sous-titre « N albums partagés avec toi ». Une carte par ligne
   (`AlbumCard`) : fond `card` blanc, arrondi 40, ombre légère (opacité 0,08, rayon 16).
   Couverture 16:10 avec deux pilules sombres translucides en haut : l'état à gauche (« En
@@ -96,6 +97,15 @@ rose à la place de l'icône pendant l'action.
   haut, bordure 2 transparente qui passe au rose au focus (150 ms), texte 17 gras, bouton
   d'effacement rond gris quand le champ est focalisé et rempli, message dessous (aide en
   muted, erreur en rose). Validation à la saisie une fois le champ touché.
+- Nouvel album (`/album/new`, bouton + de l'accueil, même `AddButton` que l'album) : titre
+  « Nouvel album », sous-titre « Un nom, une période, et c'est parti ». `TextField` du nom
+  autofocus (40 max), puis section « Période » : rangée de pastilles de raccourci (40, grise,
+  rose quand sélectionnée : Aujourd'hui, Ce week-end) qui remplissent deux
+  `DateField` « Du » / « Au » côte à côte (carte `card` arrondie 18 avec icône calendrier rose ;
+  sélecteur compact natif iOS en popover qui se referme dès le choix, dialogue système Android). Toucher une date désélectionne
+  la pastille ; la fin est ramenée au début si besoin. Note muted sur la période, puis pilule rose
+  « Créer l'album » (inactive à 40 % sans nom). À la création on remplace l'écran par l'album,
+  vide, dont le + invite à envoyer des photos. Les invitations viendront plus tard.
 - Menu (`MenuSheet`) : feuille coulissante par le bas en calque (pas une route), fond dépoli
   clair à 45 %, carte `card` arrondie 40 à 8 px des bords avec poignée. Liste sur fond
   `background` arrondie 24 : rond blanc avec icône rose, libellé 17 gras, chevron muted,

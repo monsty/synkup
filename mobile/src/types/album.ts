@@ -19,6 +19,14 @@ export type Album = {
 
 export type AlbumStatus = 'upcoming' | 'active' | 'ended';
 
+/** Date locale au format YYYY-MM-DD, celui des bornes d'album. */
+export function toDateKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /** Où en est l'album par rapport à aujourd'hui. */
 export function getAlbumStatus(album: Album, now = new Date()): AlbumStatus {
   const { start, end } = getAlbumRange(album);

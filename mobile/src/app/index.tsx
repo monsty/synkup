@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ADD_BUTTON_SIZE, AddButton } from '@/components/add-button';
 import { AlbumCard } from '@/components/album-card';
 import { MenuSheet, type MenuItemKey } from '@/components/menu-sheet';
 import { HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
@@ -94,7 +95,10 @@ export default function AlbumsScreen() {
         scrollEventThrottle={16}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: Spacing.two, paddingBottom: insets.bottom + Spacing.five },
+          {
+            paddingTop: Spacing.two,
+            paddingBottom: insets.bottom + ADD_BUTTON_SIZE + Spacing.five,
+          },
         ]}
         refreshControl={
           <RefreshControl
@@ -104,6 +108,12 @@ export default function AlbumsScreen() {
             progressViewOffset={0}
           />
         }
+      />
+
+      <AddButton
+        accessibilityLabel="Créer un album"
+        onPress={() => router.push('/album/new')}
+        bottom={insets.bottom + Spacing.four}
       />
 
       {menuKey !== null && (

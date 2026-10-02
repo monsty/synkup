@@ -2,7 +2,13 @@
  * Fausse API des albums partagés, en mémoire.
  * À remplacer par de vrais appels réseau vers `api/` quand le backend existera.
  */
-import type { Album, AlbumMember, AlbumPhoto } from '@/types/album';
+import {
+  getAlbumStatus,
+  getAlbumRange,
+  type Album,
+  type AlbumMember,
+  type AlbumPhoto,
+} from '@/types/album';
 
 const NETWORK_DELAY_MS = 350;
 const UPLOAD_DELAY_MS = 900;
@@ -32,6 +38,7 @@ type AlbumSeed = Omit<Album, 'coverUri' | 'photoCount' | 'members'> & {
   seed: number;
 };
 
+/** Albums connus : les graines de démo, plus ceux créés pendant la session. */
 const ALBUM_SEEDS: AlbumSeed[] = [
   {
     id: 'lisbonne',
@@ -135,6 +142,30 @@ function notify(albumId: string) {
   listeners.forEach((listener) => listener(albumId, snapshot));
 }
 
+export type CreateAlbumInput = {
+  name: string;
+  startDate: string;
+  endDate: string;
+};
+
+/** En cours d'abord, puis à venir (le plus proche en premier), puis terminés (le plus récent). */
+function sortAlbums(albums: Album[]): Album[] {
+  const rank: Record<ReturnType<typeof getAlbumStatus>, number> = {
+    active: 0,
+    upcoming: 1,
+    ended: 2,
+  };
+  return [...albums].sort((a, b) => {
+    const sa = getAlbumStatus(a);
+    const sb = getAlbumStatus(b);
+    if (sa !== sb) return rank[sa] - rank[sb];
+    const ra = getAlbumRange(a);
+    const rb = getAlbumRange(b);
+    if (sa === 'ended') return rb.end.getTime() - ra.end.getTime();
+    return ra.start.getTime() - rb.start.getTime();
+  });
+}
+
 export type UploadPhotoInput = {
   localUri: string;
   width: number | null;
@@ -146,7 +177,25 @@ export const albumApi = {
   /** Albums de l'utilisateur : en cours d'abord, puis à venir, puis terminés du plus récent. */
   async getAlbums(): Promise<Album[]> {
     await delay(NETWORK_DELAY_MS);
-    return ALBUM_SEEDS.map(toAlbum);
+    return sortAlbums(ALBUM_SEEDS.map(toAlbum));
+  },
+
+  /** Crée un album dont je suis le seul membre pour l'instant ; les invitations viendront après. */
+  async createAlbum(input: CreateAlbumInput): Promise<Album> {
+    await delay(NETWORK_DELAY_MS);
+    const seed: AlbumSeed = {
+      id: `album-${Date.now().toString(36)}`,
+      name: input.name,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      memberIds: ['me'],
+      photoCount: 0,
+      seed: 0,
+    };
+    ALBUM_SEEDS.push(seed);
+    photosByAlbum.set(seed.id, []);
+    notify(seed.id);
+    return toAlbum(seed);
   },
 
   async getAlbum(albumId: string): Promise<Album | null> {

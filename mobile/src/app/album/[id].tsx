@@ -1,18 +1,12 @@
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { SymbolView } from 'expo-symbols';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProgressModal } from '@/components/progress-modal';
+import { ADD_BUTTON_SIZE, AddButton } from '@/components/add-button';
 import { PageLoader } from '@/components/page-loader';
 import { PhotoGrid } from '@/components/photo-grid';
 import { PhotoViewer } from '@/components/photo-viewer';
@@ -22,13 +16,7 @@ import { useAlbum } from '@/hooks/use-album';
 import { useDownloadSelection } from '@/hooks/use-download-selection';
 import { formatAlbumRange } from '@/types/album';
 
-const FAB_SIZE = 68;
-/** Liquid Glass (iOS 26+) ; ailleurs on garde le rond rose plein. */
-const HAS_LIQUID_GLASS = isLiquidGlassAvailable();
-/** Soulèvement à la pression : léger agrandissement et éclaircissement, sans déformation. */
-const FAB_PRESSED_SCALE = 1.08;
-const FAB_PRESSED_GLOW = 0.22;
-const FAB_SPRING = { damping: 14, stiffness: 260 };
+const FAB_SIZE = ADD_BUTTON_SIZE;
 
 export default function AlbumScreen() {
   const { id: albumId } = useLocalSearchParams<{ id: string }>();
@@ -45,15 +33,6 @@ export default function AlbumScreen() {
   const selecting = download.mode === 'selecting';
   const busy = download.mode === 'running';
   const selectedCount = download.selectedIds.size;
-
-  // Le mode interactif natif du verre étire le bouton sous le doigt : on anime nous-mêmes.
-  const fabPressed = useSharedValue(0);
-  const fabStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(fabPressed.get(), [0, 1], [1, FAB_PRESSED_SCALE]) }],
-  }));
-  const fabGlowStyle = useAnimatedStyle(() => ({
-    opacity: fabPressed.get() * FAB_PRESSED_GLOW,
-  }));
 
   const downloadButton = (
     <Pressable
@@ -218,33 +197,13 @@ export default function AlbumScreen() {
         </View>
       )}
 
-      {/* Pas de <Link asChild> ici : son Slot écrase un style passé en fonction. */}
       {/* Masqué tant que la zone du bas est occupée par l'action de téléchargement. */}
       {!downloadPill && (
-        <Pressable
+        <AddButton
           accessibilityLabel="Trier mes photos de la période"
           onPress={() => router.push({ pathname: '/swipe', params: { albumId } })}
-          onPressIn={() => fabPressed.set(withSpring(1, FAB_SPRING))}
-          onPressOut={() => fabPressed.set(withSpring(0, FAB_SPRING))}
-          style={[styles.fabWrap, { bottom: insets.bottom + Spacing.four }]}>
-          <Animated.View style={fabStyle}>
-            {HAS_LIQUID_GLASS ? (
-              // Pas d'`isInteractive` : il étire et déforme le verre sous le doigt.
-              <GlassView
-                glassEffectStyle="regular"
-                tintColor={Palette.pinkGlass}
-                style={styles.fabGlass}>
-                <PlusIcon />
-                <Animated.View style={[styles.fabGlow, fabGlowStyle]} />
-              </GlassView>
-            ) : (
-              <View style={[styles.fabGlass, styles.fabSolid]}>
-                <PlusIcon />
-                <Animated.View style={[styles.fabGlow, fabGlowStyle]} />
-              </View>
-            )}
-          </Animated.View>
-        </Pressable>
+          bottom={insets.bottom + Spacing.four}
+        />
       )}
       {status === 'loading' && <PageLoader />}
 
@@ -273,18 +232,6 @@ function EmptyState({ emoji, title, body }: EmptyStateProps) {
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyBody}>{body}</Text>
     </View>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <SymbolView
-      name={{ ios: 'plus', android: 'add', web: 'add' }}
-      size={30}
-      weight="heavy"
-      tintColor={Palette.onPhoto}
-      fallback={<Text style={styles.fabFallback}>+</Text>}
-    />
   );
 }
 
@@ -500,45 +447,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     textAlign: 'center',
   },
-  fabWrap: {
-    position: 'absolute',
-    alignSelf: 'center',
-    // Pas d'ombre ni d'opacité ici : sur le parent d'une GlassView, ça casse l'effet de verre.
-  },
-  fabGlass: {
-    width: FAB_SIZE,
-    height: FAB_SIZE,
-    borderRadius: FAB_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabSolid: {
-    backgroundColor: Palette.pink,
-    shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
-  },
-  /** Voile blanc enfant du verre (une opacité sur un enfant ne casse pas l'effet). */
-  fabGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: FAB_SIZE / 2,
-    backgroundColor: '#FFFFFF',
-    pointerEvents: 'none',
-  },
   pressed: {
     opacity: 0.8,
     transform: [{ scale: 0.95 }],
-  },
-  fabFallback: {
-    color: Palette.onPhoto,
-    fontSize: 34,
-    fontWeight: '900',
-    lineHeight: 38,
   },
 });
