@@ -28,8 +28,12 @@ export default function AlbumsScreen() {
   const openAlbum = (album: Album) =>
     router.push({ pathname: '/album/[id]', params: { id: album.id } });
 
-  // POC : les écrans du menu n'existent pas encore, la sélection ne fait rien.
-  const onMenuSelect = (_key: MenuItemKey) => {};
+  const onMenuSelect = (key: MenuItemKey) => {
+    // On ferme la feuille tout de suite, puis on navigue.
+    setMenuKey(null);
+    if (key === 'profile') router.push('/profile');
+    // POC : paramètres et mentions légales n'ont pas encore d'écran.
+  };
 
   const header = (
     <View style={styles.header}>

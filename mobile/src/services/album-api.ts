@@ -175,6 +175,16 @@ export const albumApi = {
     return photo;
   },
 
+  /** Chiffres pour l'écran de profil : albums partagés avec moi, photos que j'ai envoyées. */
+  async getMyStats(): Promise<{ albums: number; photosShared: number }> {
+    await delay(NETWORK_DELAY_MS);
+    let photosShared = 0;
+    for (const photos of photosByAlbum.values()) {
+      photosShared += photos.filter((p) => p.authorName === 'Moi').length;
+    }
+    return { albums: ALBUM_SEEDS.length, photosShared };
+  },
+
   /** Notifie quand les photos d'un album changent (après un upload par exemple). */
   subscribe(listener: Listener): () => void {
     listeners.add(listener);

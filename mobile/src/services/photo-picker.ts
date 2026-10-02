@@ -39,3 +39,15 @@ export async function pickPhotosFromGallery(): Promise<GalleryPhoto[]> {
     creationTime: null,
   }));
 }
+
+/** Ouvre le sélecteur natif pour une seule image, recadrée en carré. Null si annulé. */
+export async function pickSquareImage(): Promise<string | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.9,
+  });
+  if (result.canceled) return null;
+  return result.assets[0]?.uri ?? null;
+}

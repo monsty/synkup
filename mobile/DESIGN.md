@@ -67,6 +67,18 @@ rose à la place de l'icône pendant l'action.
   (28, bord `card` 2 px, max 4 puis « +N ») avec « N personnes » et un chevron rose dans un
   rond gris. Sans couverture : icône et « Aucune photo pour le moment » sur `cardBackground`.
   Pression : opacité 0,9, échelle 0,985. Tri des albums : en cours, à venir, terminés.
+- Mon profil (`/profile`, depuis le menu) : chevron retour + marque, titre « Mon profil »,
+  sous-titre centré. Photo de profil ronde de 112 au centre (bord `card` 4, pastille rose 36
+  avec appareil photo en bas à droite, « Touche la photo pour la changer » dessous ; le tap
+  ouvre le sélecteur natif en recadrage carré). Pour habiller la page sans l'alourdir : une
+  carte `card` arrondie 18 avec trois chiffres séparés par des filets (albums, photos
+  partagées, membre depuis). Formulaire : deux `TextField` (surnom, email) puis pilule rose
+  « Enregistrer » 56 pleine largeur (ombre seulement quand il y a quelque chose à enregistrer).
+  Retour par un toast sombre en haut, sous la barre de statut (« Profil enregistré », 2,2 s).
+- `TextField` : libellé en capitales 13 muted au-dessus, carte `card` arrondie 18 de 56 de
+  haut, bordure 2 transparente qui passe au rose au focus (150 ms), texte 17 gras, bouton
+  d'effacement rond gris quand le champ est focalisé et rempli, message dessous (aide en
+  muted, erreur en rose). Validation à la saisie une fois le champ touché.
 - Menu (`MenuSheet`) : feuille coulissante par le bas en calque (pas une route), fond dépoli
   clair à 45 %, carte `card` arrondie 40 à 8 px des bords avec poignée. Liste sur fond
   `background` arrondie 24 : rond blanc avec icône rose, libellé 17 gras, chevron muted,
@@ -148,7 +160,8 @@ rose à la place de l'icône pendant l'action.
 `expo-symbols` avec un nom par plateforme (`{ ios, android, web }`) et un `fallback` texte.
 Poids `bold` ou `heavy`. Envoyer : `icloud.and.arrow.up` / `cloud_upload` (nuage avec flèche montante, trait fin `semibold`).
 Passer et fermer : `xmark` / `close`. Ajouter : `plus` / `add`.
-Galerie : `photo.on.rectangle.angled` / `photo_library`.
+Galerie : `photo.on.rectangle.angled` / `photo_library`. Photo de profil : `camera.fill` /
+`photo_camera`. Retour d'écran empilé : `chevron.left` / `arrow_back`.
 
 ## Pièges connus
 
