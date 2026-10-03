@@ -182,7 +182,15 @@ export default function AlbumScreen() {
           <Text style={styles.period}>{formatAlbumRange(album)}</Text>
           {/* Qui est dans l'album, et le bouton pour inviter (QR code ou lien). */}
           <View style={styles.membersRow}>
-            <AvatarStack members={album.members} />
+            <Pressable
+              accessibilityLabel={`Voir les ${album.members.length} membres`}
+              accessibilityRole="button"
+              disabled={closing || busy}
+              onPress={() => router.push({ pathname: '/album/members', params: { albumId } })}
+              hitSlop={8}
+              style={({ pressed }) => pressed && styles.pressed}>
+              <AvatarStack members={album.members} />
+            </Pressable>
             <Pressable
               accessibilityLabel="Inviter dans l'album"
               accessibilityRole="button"

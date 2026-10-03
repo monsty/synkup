@@ -76,7 +76,8 @@ rose à la place de l'icône pendant l'action.
   les étapes 2 et 3. Pas de mot de passe : connexion par code, Apple ou Google uniquement.
 - Mes albums (accueil) : bouton + flottant (`AddButton`, Liquid Glass) pour créer un album ;
   marque + bouton menu rond gris avec une icône utilisateur (`person.fill` / `person`) à
-  droite, titre « Mes albums », sous-titre « N albums partagés avec toi ». Une carte par ligne
+  droite, titre « Mes albums », sous-titre « N albums · M créés par toi » (ou « N albums » si aucun n'est à toi, « N albums
+  créés par toi » s'ils le sont tous). Une carte par ligne
   (`AlbumCard`) : fond `card` blanc, arrondi 40, ombre légère (opacité 0,08, rayon 16).
   Couverture 16:10 avec deux pilules sombres translucides en haut : l'état à gauche (« En
   cours » en rose avec un point menthe, « À venir », « Terminé ») et le nombre de photos à
@@ -118,14 +119,21 @@ rose à la place de l'icône pendant l'action.
   200 ms, fermeture au tap sur le fond, au glissement vers le bas (90 px ou vélocité 700) ou
   au retour Android. Boutons intérieurs en `Pressable` de Gesture Handler.
 - Gérer l'album (`/album/manage`, tap sur le titre de l'album) : titre « Gérer l'album »,
-  sous-titre « Tu es propriétaire de cet album ». Section « Infos » : `TextField` du nom, deux
-  `DateField` Du / Au, pilule rose « Enregistrer » (inactive sans changement, « Enregistré ✓ »
-  1,8 s après) ; en lecture seule pour un membre. Section « Membres · N » : carte `card`
-  arrondie 18, une rangée par membre (avatar 40, nom + « (toi) », pilule de rôle 28 grise
-  « Membre », rose « Propriétaire », « … » muted si des actions existent). Deux rôles seulement.
-  Tap par le propriétaire : feuille d'actions système (« Transférer la propriété », « Retirer de
-  l'album » en destructif), chacune confirmée par une alerte ; transférer rétrograde l'ancien
-  propriétaire en membre.
+  sous-titre « Tu es propriétaire de cet album ». Section « Photo de couverture » : la couverture
+  en carte 16:10 arrondie 40 (dernière photo de l'album par défaut), pastille rose 40 avec
+  appareil photo en bas à droite qui ouvre le sélecteur natif ; note « Couverture choisie à la
+  main » + lien rose « Revenir à la dernière photo » quand elle est personnalisée. Section
+  « Infos » : `TextField` du nom, deux `DateField` Du / Au, pilule rose « Enregistrer » (inactive
+  sans changement, « Enregistré ✓ » 1,8 s après). Tout en lecture seule pour un membre. La liste
+  des membres n'est plus ici.
+- Membres (`/album/members`, tap sur les avatars sous la date de l'album) : titre « Membres »,
+  sous-titre « N personnes dans « album » ». Carte `card` arrondie 18, une rangée par membre
+  (avatar 40, nom + « (toi) » avec dessous « N photos envoyées » en muted 13, pilule rose 28
+  « Propriétaire » sur le seul propriétaire et rien sur les membres, « … » muted si des actions
+  existent, sinon la pilule vient au bord droit). Deux rôles seulement. Tap par le propriétaire : feuille
+  d'actions système (« Transférer la propriété », « Retirer de l'album » en destructif), chacune
+  confirmée par une alerte ; transférer rétrograde l'ancien propriétaire en membre. En bas,
+  pilule rose « Inviter quelqu'un » qui ouvre la `ShareSheet`.
 - Menu (`MenuSheet`, dans une `BottomSheet`) : liste sur fond `background` arrondie 24 : rond
   blanc avec icône rose, libellé 17 gras, chevron muted, séparateurs fins. En bas, pilule grise
   « Se déconnecter » en rose avec icône : efface la session du stockage sécurisé, l'app bascule
@@ -133,7 +141,8 @@ rose à la place de l'icône pendant l'action.
 - Album (`/album/[id]`) : chevron retour à gauche de la marque ; à droite, étiquette « N photos »
   et bouton de téléchargement. Le nom de l'album, suivi d'un petit chevron muted, est pressable
   et mène à la gestion, comme le nom d'un groupe dans une messagerie. Sous la date, avatars des
-  membres (`AvatarStack`) + pilule rose 36 « Inviter » (`person.badge.plus` / `person_add`). Pendant le chargement, pas
+  membres (`AvatarStack`, pressable → liste des membres) + pilule rose 36 « Inviter »
+  (`person.badge.plus` / `person_add`). Pendant le chargement, pas
   d'étiquette de compteur et le `PageLoader` (spinner rose centré sur tout l'écran, taille
   small agrandie à 1,4, soit ~28, la même que le pull-to-refresh), l'en-tête restant visible.
   Même loader sur le profil et sur tout écran qui charge ses données. Album vide :

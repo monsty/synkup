@@ -25,7 +25,7 @@ const SIZES: [number, number][] = [
 /** Identifiant de l'utilisateur courant dans les données de démo. */
 const ME = 'me';
 
-type Person = Omit<AlbumMember, 'role'>;
+type Person = Omit<AlbumMember, 'role' | 'photoCount'>;
 
 const PEOPLE: Person[] = [
   { id: 'me', name: 'Moi', avatarUri: 'https://i.pravatar.cc/120?img=12' },
@@ -39,8 +39,13 @@ const PEOPLE: Person[] = [
 
 type MemberSeed = { id: string; role: AlbumRole };
 
-type AlbumSeed = Omit<Album, 'coverUri' | 'photoCount' | 'members' | 'myRole'> & {
+type AlbumSeed = Omit<
+  Album,
+  'coverUri' | 'hasCustomCover' | 'photoCount' | 'members' | 'myRole'
+> & {
   members: MemberSeed[];
+  /** Couverture choisie par le propriétaire ; sinon la dernière photo de l'album. */
+  coverUri?: string | null;
   photoCount: number;
   /** Décalage de graine pour que chaque album ait ses propres images. */
   seed: number;
@@ -155,7 +160,9 @@ function toAlbum(seed: AlbumSeed): Album {
   const members = seed.members
     .map((m) => {
       const person = PEOPLE.find((p) => p.id === m.id);
-      return person ? { ...person, role: m.role } : null;
+      if (!person) return null;
+      const photoCount = photos.filter((photo) => photo.authorName === person.name).length;
+      return { ...person, role: m.role, photoCount };
     })
     .filter((m): m is AlbumMember => !!m);
   return {
@@ -163,7 +170,8 @@ function toAlbum(seed: AlbumSeed): Album {
     name: seed.name,
     startDate: seed.startDate,
     endDate: seed.endDate,
-    coverUri: photos[0]?.uri ?? null,
+    coverUri: seed.coverUri ?? photos[0]?.uri ?? null,
+    hasCustomCover: !!seed.coverUri,
     members,
     photoCount: photos.length,
     myRole: seed.members.find((m) => m.id === ME)?.role ?? 'member',
@@ -190,7 +198,10 @@ export type CreateAlbumInput = {
   endDate: string;
 };
 
-export type UpdateAlbumInput = Partial<CreateAlbumInput>;
+export type UpdateAlbumInput = Partial<CreateAlbumInput> & {
+  /** `null` pour revenir à la dernière photo de l'album. */
+  coverUri?: string | null;
+};
 
 /** En cours d'abord, puis à venir (le plus proche en premier), puis terminés (le plus récent). */
 function sortAlbums(albums: Album[]): Album[] {
@@ -285,6 +296,7 @@ export const albumApi = {
     if (input.name !== undefined) seed.name = input.name;
     if (input.startDate !== undefined) seed.startDate = input.startDate;
     if (input.endDate !== undefined) seed.endDate = input.endDate;
+    if (input.coverUri !== undefined) seed.coverUri = input.coverUri;
     notify(albumId);
     return toAlbum(seed);
   },

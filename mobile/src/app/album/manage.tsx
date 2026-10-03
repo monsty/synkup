@@ -2,17 +2,7 @@ import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  ActionSheetIOS,
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateField } from '@/components/date-field';
@@ -21,21 +11,10 @@ import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { albumApi } from '@/services/album-api';
-import {
-  assignableRoles,
-  canEditAlbum,
-  canRemoveMember,
-  getAlbumRange,
-  ROLE_LABEL,
-  toDateKey,
-  type Album,
-  type AlbumMember,
-} from '@/types/album';
+import { pickSingleImage } from '@/services/photo-picker';
+import { canEditAlbum, getAlbumRange, ROLE_LABEL, toDateKey, type Album } from '@/types/album';
 
 const NAME_MAX = 40;
-/** Identifiant de l'utilisateur courant dans les données de démo. */
-const ME = 'me';
-
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -98,8 +77,8 @@ export default function ManageAlbumScreen() {
 
         {album && (
           <>
+            <CoverSection album={album} onUpdated={setAlbum} />
             <InfoSection album={album} onUpdated={setAlbum} />
-            <MembersSection album={album} onUpdated={setAlbum} />
           </>
         )}
       </ScrollView>
@@ -197,153 +176,84 @@ function InfoSection({ album, onUpdated }: SectionProps) {
   );
 }
 
-/** Liste des membres avec leur rôle ; un tap ouvre les actions possibles selon mon rôle. */
-function MembersSection({ album, onUpdated }: SectionProps) {
-  const [busyId, setBusyId] = useState<string | null>(null);
+/** Photo de couverture : la dernière photo par défaut, ou une image choisie par le propriétaire. */
+function CoverSection({ album, onUpdated }: SectionProps) {
+  const editable = canEditAlbum(album.myRole);
+  const [busy, setBusy] = useState(false);
 
-  const run = async (memberId: string, action: () => Promise<Album>) => {
-    setBusyId(memberId);
+  const apply = async (coverUri: string | null) => {
+    setBusy(true);
     try {
-      onUpdated(await action());
-    } catch (e: unknown) {
-      Alert.alert('Oups', e instanceof Error ? e.message : 'Une erreur est survenue.');
+      onUpdated(await albumApi.updateAlbum(album.id, { coverUri }));
     } finally {
-      setBusyId(null);
+      setBusy(false);
     }
   };
 
-  const openActions = (member: AlbumMember) => {
-    const roles = assignableRoles(album.myRole, member.role);
-    const removable = canRemoveMember(album.myRole, member.role);
-    if (member.id === ME || (roles.length === 0 && !removable)) return;
-
-    const actions: { label: string; destructive?: boolean; onPress: () => void }[] = roles.map(
-      (role) => ({
-        label:
-          role === 'owner'
-            ? 'Transférer la propriété'
-            : `Passer ${ROLE_LABEL[role].toLowerCase()}`,
-        onPress: () => {
-          if (role === 'owner') {
-            Alert.alert(
-              `Transférer la propriété à ${member.name} ?`,
-              'Tu deviendras simple membre de cet album.',
-              [
-                { text: 'Annuler', style: 'cancel' },
-                {
-                  text: 'Transférer',
-                  onPress: () =>
-                    run(member.id, () => albumApi.updateMemberRole(album.id, member.id, role)),
-                },
-              ]
-            );
-            return;
-          }
-          run(member.id, () => albumApi.updateMemberRole(album.id, member.id, role));
-        },
-      })
-    );
-    if (removable) {
-      actions.push({
-        label: "Retirer de l'album",
-        destructive: true,
-        onPress: () =>
-          Alert.alert(`Retirer ${member.name} ?`, "Cette personne n'aura plus accès à l'album.", [
-            { text: 'Annuler', style: 'cancel' },
-            {
-              text: 'Retirer',
-              style: 'destructive',
-              onPress: () => run(member.id, () => albumApi.removeMember(album.id, member.id)),
-            },
-          ]),
-      });
-    }
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          title: member.name,
-          options: [...actions.map((a) => a.label), 'Annuler'],
-          cancelButtonIndex: actions.length,
-          destructiveButtonIndex: actions.findIndex((a) => a.destructive),
-        },
-        (index) => actions[index]?.onPress()
-      );
-    } else {
-      Alert.alert(member.name, undefined, [
-        ...actions.map((a) => ({
-          text: a.label,
-          style: a.destructive ? ('destructive' as const) : ('default' as const),
-          onPress: a.onPress,
-        })),
-        { text: 'Annuler', style: 'cancel' },
-      ]);
-    }
+  const change = async () => {
+    const uri = await pickSingleImage();
+    if (uri) await apply(uri);
   };
 
-  const count = album.members.length;
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>
-        Membres <Text style={styles.sectionCount}>· {count}</Text>
-      </Text>
-      <View style={styles.list}>
-        {album.members.map((member, index) => {
-          const actionable =
-            member.id !== ME &&
-            (assignableRoles(album.myRole, member.role).length > 0 ||
-              canRemoveMember(album.myRole, member.role));
-          const busy = busyId === member.id;
-          return (
-            <Pressable
-              key={member.id}
-              accessibilityRole={actionable ? 'button' : undefined}
-              accessibilityLabel={`${member.name}, ${ROLE_LABEL[member.role]}`}
-              disabled={!actionable || busy}
-              onPress={() => openActions(member)}
-              style={({ pressed }) => [
-                styles.row,
-                index < count - 1 && styles.rowDivider,
-                pressed && styles.rowPressed,
-              ]}>
-              <Image
-                source={{ uri: member.avatarUri }}
-                cachePolicy="memory-disk"
-                style={styles.avatar}
+      <Text style={styles.sectionTitle}>Photo de couverture</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Changer la photo de couverture"
+        disabled={!editable || busy}
+        onPress={change}
+        style={({ pressed }) => [styles.cover, pressed && styles.coverPressed]}>
+        {album.coverUri ? (
+          <Image
+            source={{ uri: album.coverUri }}
+            contentFit="cover"
+            transition={150}
+            cachePolicy="memory-disk"
+            style={StyleSheet.absoluteFill}
+          />
+        ) : (
+          <View style={styles.coverEmpty}>
+            <Text style={styles.coverEmptyText}>Aucune photo pour le moment</Text>
+          </View>
+        )}
+        {editable && (
+          <View style={styles.coverBadge}>
+            {busy ? (
+              <ActivityIndicator size="small" color={Palette.onPhoto} />
+            ) : (
+              <SymbolView
+                name={{ ios: 'camera.fill', android: 'photo_camera', web: 'photo_camera' }}
+                size={16}
+                weight="bold"
+                tintColor={Palette.onPhoto}
+                fallback={<Text style={styles.coverBadgeFallback}>📷</Text>}
               />
-              <View style={styles.rowText}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {member.name}
-                  {member.id === ME && <Text style={styles.you}> (toi)</Text>}
-                </Text>
-              </View>
-              <View style={[styles.rolePill, member.role === 'owner' && styles.rolePillOwner]}>
-                <Text style={[styles.roleText, member.role === 'owner' && styles.roleTextOwner]}>
-                  {ROLE_LABEL[member.role]}
-                </Text>
-              </View>
-              {busy ? (
-                <ActivityIndicator size="small" color={Palette.pink} />
-              ) : actionable ? (
-                <SymbolView
-                  name={{ ios: 'ellipsis', android: 'more_horiz', web: 'more_horiz' }}
-                  size={16}
-                  weight="heavy"
-                  tintColor={Palette.textMuted}
-                  fallback={<Text style={styles.moreFallback}>…</Text>}
-                />
-              ) : (
-                <View style={styles.moreSpacer} />
-              )}
+            )}
+          </View>
+        )}
+      </Pressable>
+      {editable ? (
+        <View style={styles.coverActions}>
+          <Text style={styles.hint}>
+            {album.hasCustomCover
+              ? 'Couverture choisie à la main.'
+              : "Par défaut, la dernière photo ajoutée à l'album."}
+          </Text>
+          {album.hasCustomCover && (
+            <Pressable
+              accessibilityRole="button"
+              disabled={busy}
+              onPress={() => apply(null)}
+              hitSlop={8}
+              style={({ pressed }) => pressed && styles.pressed}>
+              <Text style={styles.link}>Revenir à la dernière photo</Text>
             </Pressable>
-          );
-        })}
-      </View>
-      <Text style={styles.hint}>
-        {canEditAlbum(album.myRole)
-          ? 'Touche un membre pour lui transférer la propriété ou le retirer.'
-          : 'Seul le propriétaire gère les membres.'}
-      </Text>
+          )}
+        </View>
+      ) : (
+        <Text style={styles.hint}>Seul le propriétaire peut changer la couverture.</Text>
+      )}
     </View>
   );
 }
@@ -424,72 +334,51 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
   },
-  list: {
-    borderRadius: Radii.tile,
-    backgroundColor: Palette.card,
+  cover: {
+    aspectRatio: 16 / 10,
+    borderRadius: Radii.card,
     overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two + Spacing.one,
-    minHeight: 64,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  rowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: Palette.surfaceStrong,
-  },
-  rowPressed: {
-    backgroundColor: Palette.background,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: Palette.cardBackground,
   },
-  rowText: {
+  coverPressed: {
+    opacity: 0.9,
+  },
+  coverEmpty: {
     flex: 1,
-  },
-  name: {
-    color: Palette.text,
-    fontFamily: Fonts.rounded,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  you: {
-    color: Palette.textMuted,
-    fontWeight: '600',
-  },
-  rolePill: {
-    height: 28,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Radii.pill,
-    backgroundColor: Palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rolePillOwner: {
-    backgroundColor: Palette.pink,
-  },
-  roleText: {
-    color: Palette.text,
-    fontFamily: Fonts.rounded,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  roleTextOwner: {
-    color: Palette.onPhoto,
-  },
-  moreFallback: {
+  coverEmptyText: {
     color: Palette.textMuted,
-    fontSize: 16,
-    fontWeight: '900',
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '600',
   },
-  moreSpacer: {
-    width: 16,
+  coverBadge: {
+    position: 'absolute',
+    right: Spacing.three,
+    bottom: Spacing.three,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Palette.pink,
+    borderWidth: 3,
+    borderColor: Palette.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverBadgeFallback: {
+    fontSize: 14,
+  },
+  coverActions: {
+    gap: Spacing.one,
+  },
+  link: {
+    color: Palette.pink,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '800',
+    paddingHorizontal: Spacing.one,
   },
   hint: {
     color: Palette.textMuted,

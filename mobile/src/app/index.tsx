@@ -21,6 +21,16 @@ import { useAlbums } from '@/hooks/use-albums';
 import { useAuth } from '@/providers/auth-provider';
 import type { Album } from '@/types/album';
 
+/** « 4 albums · 2 créés par toi », « 1 album », « 2 albums créés par toi ». */
+function describeAlbums(albums: Album[]): string {
+  const total = albums.length;
+  const mine = albums.filter((album) => album.myRole === 'owner').length;
+  const albumsLabel = `${total} album${total > 1 ? 's' : ''}`;
+  if (total === 0 || mine === 0) return albumsLabel;
+  if (mine === total) return `${albumsLabel} créé${total > 1 ? 's' : ''} par toi`;
+  return `${albumsLabel} · ${mine} créé${mine > 1 ? 's' : ''} par toi`;
+}
+
 export default function AlbumsScreen() {
   const { albums, status, refreshing, refresh } = useAlbums();
   const { signOut } = useAuth();
@@ -60,11 +70,7 @@ export default function AlbumsScreen() {
     <View style={styles.header}>
       <View style={styles.titleBlock}>
         <Text style={styles.title}>Mes albums</Text>
-        <Text style={styles.subtitle}>
-          {status === 'ready'
-            ? `${albums.length} album${albums.length > 1 ? 's' : ''} partagé${albums.length > 1 ? 's' : ''} avec toi`
-            : ' '}
-        </Text>
+        <Text style={styles.subtitle}>{status === 'ready' ? describeAlbums(albums) : ' '}</Text>
       </View>
     </View>
   );

@@ -12,6 +12,8 @@ export type AlbumMember = {
   name: string;
   avatarUri: string;
   role: AlbumRole;
+  /** Photos envoyées par ce membre dans l'album. */
+  photoCount: number;
 };
 
 /** Seul le propriétaire modifie le nom, la période et gère les membres. */
@@ -37,6 +39,8 @@ export type Album = {
   endDate: string;
   /** Photo de couverture (en général la dernière ajoutée). */
   coverUri: string | null;
+  /** Vrai si la couverture a été choisie à la main (sinon c'est la dernière photo). */
+  hasCustomCover: boolean;
   members: AlbumMember[];
   photoCount: number;
   /** Mon rôle dans cet album. */
