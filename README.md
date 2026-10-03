@@ -5,7 +5,7 @@ Partage tes photos dans un album commun sans effort : l'app te propose les photo
 ## Structure
 
 - `mobile/` : application Expo (React Native). Voir `mobile/DESIGN.md` pour le thème et `mobile/AGENTS.md` pour les conventions.
-- `api/` : backend à venir. Pour l'instant l'app utilise une fausse API en mémoire (`mobile/src/services/album-api.ts`).
+- `api/` : API NestJS + Prisma (Postgres). Voir `api/README.md`. L'app mobile utilise encore une fausse API en mémoire (`mobile/src/services/album-api.ts`) en attendant le branchement.
 
 ## Lancer l'app
 

@@ -1,0 +1,99 @@
+// Schéma Synkup : utilisateurs, albums, membres avec rôle, photos.
+// L'identité vient de Clerk : `User.id` est l'identifiant Clerk, pas de mot de passe ici.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// Prisma 7 : l'URL de connexion vit dans prisma.config.ts, pas ici.
+datasource db {
+  provider = "postgresql"
+}
+
+enum AlbumRole {
+  OWNER
+  MEMBER
+}
+
+enum Plan {
+  FREE
+  PRO
+  ULTRA
+}
+
+model User {
+  id        String   @id // identifiant Clerk
+  email     String   @unique
+  nickname  String
+  avatarUrl String?
+  plan      Plan     @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships AlbumMember[]
+  photos      Photo[]
+}
+
+model Album {
+  id        String   @id @default(cuid())
+  name      String
+  /// Bornes de la période, dates locales au format YYYY-MM-DD.
+  startDate String
+  endDate   String
+  coverUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members AlbumMember[]
+  photos  Photo[]
+  invites AlbumInvite[]
+}
+
+/// Appartenance à un album. Un seul OWNER par album (contrainte applicative).
+model AlbumMember {
+  albumId  String
+  userId   String
+  role     AlbumRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
+
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([albumId, userId])
+  @@index([userId])
+}
+
+/// Photo stockée dans le bucket ; l'API ne voit jamais les octets.
+model Photo {
+  id          String   @id @default(cuid())
+  albumId     String
+  authorId    String
+  /// Clé de l'objet dans le bucket.
+  storageKey  String   @unique
+  /// Hash du fichier calculé côté téléphone : refuse les doublons avant l'envoi.
+  contentHash String
+  width       Int
+  height      Int
+  takenAt     DateTime
+  createdAt   DateTime @default(now())
+
+  album  Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id])
+
+  @@unique([albumId, contentHash])
+  @@index([albumId, takenAt(sort: Desc)])
+}
+
+/// Lien d'invitation (QR code / lien) : jeton opaque, expirable, révocable.
+model AlbumInvite {
+  token     String    @id @default(cuid())
+  albumId   String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
+  revokedAt DateTime?
+
+  album Album @relation(fields: [albumId], references: [id], onDelete: Cascade)
+
+  @@index([albumId])
+}
