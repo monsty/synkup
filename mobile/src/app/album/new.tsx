@@ -1,6 +1,15 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useNavigation } from 'expo-router';
+import type { NativeStackNavigationProp } from 'expo-router/build/react-navigation/native-stack';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  type TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateField } from '@/components/date-field';
@@ -53,6 +62,17 @@ export default function NewAlbumScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
+
+  // Le clavier s'ouvre une fois la transition d'entrée terminée : ouvert pendant, il la saccade.
+  const nameInput = useRef<TextInput>(null);
+  // Typé explicitement : `transitionEnd` est un événement de la pile native, pas du routeur.
+  const navigation = useNavigation<NativeStackNavigationProp<Record<string, undefined>>>();
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('transitionEnd', (event) => {
+      if (!event.data.closing) nameInput.current?.focus();
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   const trimmedName = name.trim();
   const canCreate = trimmedName.length > 0 && trimmedName.length <= NAME_MAX && !saving;
@@ -119,7 +139,7 @@ export default function NewAlbumScreen() {
           onChangeText={setName}
           placeholder="Week-end à Lisbonne"
           autoCapitalize="sentences"
-          autoFocus
+          inputRef={nameInput}
           maxLength={NAME_MAX + 4}
           returnKeyType="done"
           onSubmitEditing={create}

@@ -165,6 +165,7 @@ function toAlbum(seed: AlbumSeed): Album {
       return { ...person, role: m.role, photoCount };
     })
     .filter((m): m is AlbumMember => !!m);
+  const myRole = seed.members.find((m) => m.id === ME)?.role ?? 'member';
   return {
     id: seed.id,
     name: seed.name,
@@ -174,7 +175,7 @@ function toAlbum(seed: AlbumSeed): Album {
     hasCustomCover: !!seed.coverUri,
     members,
     photoCount: photos.length,
-    myRole: seed.members.find((m) => m.id === ME)?.role ?? 'member',
+    myRole,
   };
 }
 
@@ -279,6 +280,19 @@ export const albumApi = {
     return photo;
   },
 
+  /**
+   * Photos actives comptées dans mon quota : celles présentes aujourd'hui dans les albums que
+   * j'ai créés. Supprimer des photos ou un album fait baisser le compteur.
+   */
+  async getMyUsage(): Promise<{ photos: number; albums: number }> {
+    await delay(NETWORK_DELAY_MS);
+    const owned = ALBUM_SEEDS.filter((a) =>
+      a.members.some((m) => m.id === ME && m.role === 'owner')
+    );
+    const photos = owned.reduce((sum, a) => sum + (photosByAlbum.get(a.id)?.length ?? 0), 0);
+    return { photos, albums: owned.length };
+  },
+
   /** Chiffres pour l'écran de profil : albums partagés avec moi, photos que j'ai envoyées. */
   async getMyStats(): Promise<{ albums: number; photosShared: number }> {
     await delay(NETWORK_DELAY_MS);
@@ -321,6 +335,15 @@ export const albumApi = {
     seed.members = seed.members.filter((m) => m.id !== memberId);
     notify(albumId);
     return toAlbum(seed);
+  },
+
+  /** Supprime un album et toutes ses photos (propriétaire). Libère le quota. */
+  async deleteAlbum(albumId: string): Promise<void> {
+    await delay(NETWORK_DELAY_MS);
+    const index = ALBUM_SEEDS.findIndex((a) => a.id === albumId);
+    if (index !== -1) ALBUM_SEEDS.splice(index, 1);
+    photosByAlbum.delete(albumId);
+    notify(albumId);
   },
 
   /** Supprime des photos de l'album. POC : sans contrôle d'auteur. */

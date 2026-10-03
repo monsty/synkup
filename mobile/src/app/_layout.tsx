@@ -44,6 +44,9 @@ function RootNavigator() {
         <Stack.Screen name="album/members" />
         <Stack.Screen name="album/[id]" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="language" />
+        <Stack.Screen name="subscription" />
         <Stack.Screen
           name="swipe"
           options={{ presentation: 'transparentModal', animation: 'fade' }}

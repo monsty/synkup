@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { router } from 'expo-router';
+import { pushOnce } from '@/navigation/push-once';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -22,6 +22,10 @@ import { useAuth } from '@/providers/auth-provider';
 import type { Album } from '@/types/album';
 
 /** « 4 albums · 2 créés par toi », « 1 album », « 2 albums créés par toi ». */
+function ItemGap() {
+  return <View style={styles.itemGap} />;
+}
+
 function describeAlbums(albums: Album[]): string {
   const total = albums.length;
   const mine = albums.filter((album) => album.myRole === 'owner').length;
@@ -40,13 +44,14 @@ export default function AlbumsScreen() {
   const [scrolled, setScrolled] = useState(false);
 
   const openAlbum = (album: Album) =>
-    router.push({ pathname: '/album/[id]', params: { id: album.id } });
+    pushOnce({ pathname: '/album/[id]', params: { id: album.id } });
 
   const onMenuSelect = (key: MenuItemKey) => {
     // On ferme la feuille tout de suite, puis on navigue.
     setMenuKey(null);
-    if (key === 'profile') router.push('/profile');
-    // POC : paramètres et mentions légales n'ont pas encore d'écran.
+    if (key === 'profile') pushOnce('/profile');
+    if (key === 'settings') pushOnce('/settings');
+    // POC : les mentions légales n'ont pas encore d'écran.
   };
 
   const menuButton = (
@@ -91,6 +96,7 @@ export default function AlbumsScreen() {
         data={albums}
         keyExtractor={(album) => album.id}
         renderItem={({ item }) => <AlbumCard album={item} onPress={openAlbum} />}
+        ItemSeparatorComponent={ItemGap}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
         contentInsetAdjustmentBehavior="never"
@@ -115,7 +121,7 @@ export default function AlbumsScreen() {
 
       <AddButton
         accessibilityLabel="Créer un album"
-        onPress={() => router.push('/album/new')}
+        onPress={() => pushOnce('/album/new')}
         bottom={insets.bottom + Spacing.four}
       />
 
@@ -143,10 +149,13 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.three,
-    gap: Spacing.three,
   },
+  itemGap: {
+    height: Spacing.three,
+  },
+  // 20 pt sous le sous-titre, comme avant les sections (padding 4 + gap de liste 16).
   header: {
-    paddingBottom: Spacing.one,
+    paddingBottom: Spacing.three + Spacing.one,
   },
   menuButton: {
     width: 40,

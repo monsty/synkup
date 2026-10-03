@@ -5,7 +5,6 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PageLoader } from '@/components/page-loader';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
@@ -86,8 +85,6 @@ export default function ProfileScreen() {
           )}
         </ScrollView>
       </View>
-
-      {status === 'loading' && <PageLoader />}
 
       {toast && (
         <Animated.View

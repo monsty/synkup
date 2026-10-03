@@ -50,6 +50,11 @@ function read(): Profile {
 
 export type ProfileUpdate = Partial<Pick<Profile, 'nickname' | 'email' | 'avatarUri'>>;
 
+/** Lecture immédiate du profil local : l'écran s'affiche sans chargement. */
+export function getProfileSync(): Profile {
+  return read();
+}
+
 export const profileApi = {
   async getProfile(): Promise<Profile> {
     await delay(NETWORK_DELAY_MS);

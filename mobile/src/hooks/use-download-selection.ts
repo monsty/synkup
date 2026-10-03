@@ -59,6 +59,14 @@ export function useDownloadSelection(album: Album | null, photos: AlbumPhoto[]) 
     });
   }, []);
 
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(photos.map((photo) => photo.id)));
+  }, [photos]);
+
+  const clearAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
   /** Enregistre la sélection, y compris les photos déjà présentes si l'utilisateur les a cochées. */
   const confirm = useCallback(async () => {
     if (!album || mode !== 'selecting' || selectedIds.size === 0) return;
@@ -85,6 +93,8 @@ export function useDownloadSelection(album: Album | null, photos: AlbumPhoto[]) 
     start,
     cancel,
     toggle,
+    selectAll,
+    clearAll,
     confirm,
   };
 }

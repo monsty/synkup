@@ -78,7 +78,7 @@ rose à la place de l'icône pendant l'action.
   marque + bouton menu rond gris avec une icône utilisateur (`person.fill` / `person`) à
   droite, titre « Mes albums », sous-titre « N albums · M créés par toi » (ou « N albums » si aucun n'est à toi, « N albums
   créés par toi » s'ils le sont tous). Une carte par ligne
-  (`AlbumCard`) : fond `card` blanc, arrondi 40, ombre légère (opacité 0,08, rayon 16).
+  (`AlbumCard`), sans séparateurs de section : fond `card` blanc, arrondi 40, ombre légère (opacité 0,08, rayon 16).
   Couverture 16:10 avec deux pilules sombres translucides en haut : l'état à gauche (« En
   cours » en rose avec un point menthe, « À venir », « Terminé ») et le nombre de photos à
   droite. Dessous : nom (22, 800), période + état relatif en muted (« Se termine dans 3 jours »,
@@ -86,7 +86,7 @@ rose à la place de l'icône pendant l'action.
   (28, bord `card` 2 px, max 4 puis « +N ») avec « N personnes » et un chevron rose dans un
   rond gris. Sans couverture : icône et « Aucune photo pour le moment » sur `cardBackground`.
   Pression : opacité 0,9, échelle 0,985. Tri des albums : en cours, à venir, terminés.
-- Mon profil (`/profile`, depuis le menu) : chevron retour + marque, titre « Mon profil »,
+- Mon profil (`/profile`, depuis le menu, profil local lu en synchrone : pas de loader) : chevron retour + marque, titre « Mon profil »,
   sous-titre centré. Photo de profil ronde de 112 au centre (bord `card` 4, pastille rose 36
   avec appareil photo en bas à droite, « Touche la photo pour la changer » dessous ; le tap
   ouvre le sélecteur natif, sans recadrage : sur iOS le recadrage force l'ancien contrôleur
@@ -118,14 +118,16 @@ rose à la place de l'icône pendant l'action.
   `card` arrondie 40 à 8 px des bords avec poignée, entrée en ressort sans rebond, sortie
   200 ms, fermeture au tap sur le fond, au glissement vers le bas (90 px ou vélocité 700) ou
   au retour Android. Boutons intérieurs en `Pressable` de Gesture Handler.
-- Gérer l'album (`/album/manage`, tap sur le titre de l'album) : titre « Gérer l'album »,
+- Gérer l'album (`/album/manage`, tap sur le titre de l'album, propriétaire uniquement) : titre « Gérer l'album »,
   sous-titre « Tu es propriétaire de cet album ». Section « Photo de couverture » : la couverture
   en carte 16:10 arrondie 40 (dernière photo de l'album par défaut), pastille rose 40 avec
   appareil photo en bas à droite qui ouvre le sélecteur natif ; note « Couverture choisie à la
   main » + lien rose « Revenir à la dernière photo » quand elle est personnalisée. Section
   « Infos » : `TextField` du nom, deux `DateField` Du / Au, pilule rose « Enregistrer » (inactive
-  sans changement, « Enregistré ✓ » 1,8 s après). Tout en lecture seule pour un membre. La liste
-  des membres n'est plus ici.
+  sans changement, « Enregistré ✓ » 1,8 s après). Un membre arrivé par un lien ne voit qu'un message
+  « Seul le propriétaire peut gérer cet album ». La liste des membres n'est plus ici. Tout en bas, pour le propriétaire, « Supprimer l'album » en lien
+  muted souligné, confirmé par une alerte destructive qui rappelle le nombre de photos, puis
+  retour à la liste des albums.
 - Membres (`/album/members`, tap sur les avatars sous la date de l'album) : titre « Membres »,
   sous-titre « N personnes dans « album » ». Carte `card` arrondie 18, une rangée par membre
   (avatar 40, nom + « (toi) » avec dessous « N photos envoyées » en muted 13, pilule rose 28
@@ -134,13 +136,41 @@ rose à la place de l'icône pendant l'action.
   d'actions système (« Transférer la propriété », « Retirer de l'album » en destructif), chacune
   confirmée par une alerte ; transférer rétrograde l'ancien propriétaire en membre. En bas,
   pilule rose « Inviter quelqu'un » qui ouvre la `ShareSheet`.
+- Paramètres (`/settings`, depuis le menu, réglages lus en synchrone : pas de loader, seule
+  la ligne d'usage du quota se remplit en arrière-plan) : titre « Paramètres », sous-titre « Langue,
+  notifications et abonnement ». Sections (libellé en capitales muted + carte `card` arrondie
+  18, rangées de 60 avec icône rose dans un rond gris 36, libellé 16 gras, détail muted 13) :
+  « Mon abonnement » (rangée pressable « Offre Gratuit », « 46 photos sur 1 000 », chevron →
+  `/subscription`) ; « Notifications » (deux `Switch` roses : mes albums, albums où je suis
+  membre, persistés par compte) ; « Langue » (une rangée « Langue de l'application · Français » avec
+  chevron → `/language`) ; « À propos » (version). Tout en bas, « Supprimer mon
+  compte » en lien muted souligné, volontairement discret, confirmé par une alerte destructive.
+- Langue (`/language`) : titre « Langue », sous-titre « D'autres langues arrivent bientôt ».
+  Liste embarquée dans l'app, affichée sans chargement (réglage lu en synchrone).
+  Carte `card` arrondie 18, une rangée de 60 par langue : nom dans sa langue (16 gras) et, si
+  différent, nom français en muted dessous ; coche ronde rose sur la langue active, pilule
+  grise « Bientôt » et rangée à 55 % pour celles non disponibles. Pas de drapeaux. Le choix
+  d'une langue enregistre et revient aux paramètres. Prévu pour une dizaine de langues.
+- Mon abonnement (`/subscription`) : sous-titre « Seules les photos des albums que tu crées
+  comptent. Participer est toujours gratuit. ». Carte d'usage `card` : « Offre Gratuit »,
+  « N albums créés », barre de progression 8 rose, « 46 photos actives sur 1 000 », puis une
+  note muted : seules les photos encore présentes dans mes albums comptent, supprimer des photos
+  ou un album libère de la place. Pas de durée de conservation pour l'instant.
+  Trois cartes d'offre identiques (`card`, arrondi 40, bordure 2 transparente) : Gratuit 1 000,
+  Pro 25 000, Ultra 250 000 photos, prix indicatifs 4,99 € et 19,99 € / mois. Chaque carte liste
+  une caractéristique avec icône rose : « Jusqu'à N photos actives ». L'état se lit aux étiquettes
+  à côté du nom : « Ton offre » rose + bordure rose sur l'offre en cours, « Recommandée » menthe
+  sur la Pro. Bouton gris « Offre actuelle » sur l'offre en cours, pilule rose « Choisir … »
+  sinon (POC : alerte « bientôt »). Jamais de carte inversée.
+  Note en bas : les membres ne paient jamais.
 - Menu (`MenuSheet`, dans une `BottomSheet`) : liste sur fond `background` arrondie 24 : rond
   blanc avec icône rose, libellé 17 gras, chevron muted, séparateurs fins. En bas, pilule grise
   « Se déconnecter » en rose avec icône : efface la session du stockage sécurisé, l'app bascule
   sur la connexion.
 - Album (`/album/[id]`) : chevron retour à gauche de la marque ; à droite, étiquette « N photos »
-  et bouton de téléchargement. Le nom de l'album, suivi d'un petit chevron muted, est pressable
-  et mène à la gestion, comme le nom d'un groupe dans une messagerie. Sous la date, avatars des
+  et bouton de téléchargement. Pour le propriétaire seulement, le nom de l'album, suivi de l'icône
+  « composer » muted 18 sans fond (`square.and.pencil` / `edit_square`), est pressable et mène à la gestion ; un
+  membre voit le nom seul. Sous la date, avatars des
   membres (`AvatarStack`, pressable → liste des membres) + pilule rose 36 « Inviter »
   (`person.badge.plus` / `person_add`). Pendant le chargement, pas
   d'étiquette de compteur et le `PageLoader` (spinner rose centré sur tout l'écran, taille
@@ -163,8 +193,10 @@ rose à la place de l'icône pendant l'action.
   de sortie (flèche retour rose), collé à droite un rond `text` sombre de 68 avec une corbeille
   blanche (`trash` / `delete`) et une pastille rose du nombre coché. La suppression passe par
   l'alerte système (« Supprimer N photos ? », bouton destructif), puis la grille se met à jour.
-  Mode sélection (après tap sur le bouton de téléchargement) : un bandeau apparaît sous la
-  date (carte `card` arrondie 18, icône rose dans un rond gris 32, texte muted 14 ; marge
+  Mode sélection (après tap sur le bouton de téléchargement) : sous la date, une rangée
+  « N / M sélectionnées » en muted avec, à droite, une pastille grise au texte rose « Tout
+  sélectionner » / « Tout désélectionner » (commune aux deux modes, téléchargement et
+  gestion), puis un bandeau (carte `card` arrondie 18, icône rose dans un rond gris 32, texte muted 14 ; marge
   haute 4 pour compenser le gap de l'en-tête et la ligne de la date, de sorte que l'espace
   visuel soit le même au-dessus et en dessous, ~24) : « On
   t'a pré-sélectionné les photos qui n'ont pas encore été enregistrées sur ce téléphone », ou,
@@ -254,5 +286,10 @@ Galerie : `photo.on.rectangle.angled` / `photo_library`. Photo de profil : `came
   lancement par `AuthProvider` ; `Stack.Protected` dans le layout racine n'expose que la
   connexion ou l'app selon l'état. Les données locales (photos triées, présentes sur le
   téléphone, profil) sont préfixées par l'identifiant utilisateur.
+- Double tap sur un bouton de navigation : un timer côté action, pas un blocage du routeur.
+  Tout `push` passe par `pushOnce` (`src/navigation/push-once.ts`), qui ignore un second appel
+  pendant 700 ms après le premier ; centralisé pour couvrir tous les boutons sans dupliquer le
+  timer. Les écrans empilés restent `dangerouslySingular` dans le layout racine en filet, pour
+  les liens profonds.
 - Hermes sous Expo Go n'a pas `Intl.RelativeTimeFormat` : les dates relatives sont écrites à la
   main dans `src/types/album.ts`.

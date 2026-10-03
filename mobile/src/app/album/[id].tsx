@@ -1,5 +1,6 @@
 import { SymbolView } from 'expo-symbols';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
+import { pushOnce } from '@/navigation/push-once';
 import { useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -44,6 +45,13 @@ export default function AlbumScreen() {
   const [deleting, setDeleting] = useState(false);
   const managing = manageIds !== null;
   const manageCount = manageIds?.size ?? 0;
+
+  // Tout / rien : agit sur la sélection active (téléchargement ou gestion).
+  const selectedCountAll = managing ? manageCount : download.selectedIds.size;
+  const allSelected = photos.length > 0 && selectedCountAll === photos.length;
+  const selectAllCurrent = () =>
+    managing ? setManageIds(new Set(photos.map((p) => p.id))) : download.selectAll();
+  const clearAllCurrent = () => (managing ? setManageIds(new Set()) : download.clearAll());
 
   const startManaging = (photoId: string) => {
     if (selecting || busy) return;
@@ -160,25 +168,34 @@ export default function AlbumScreen() {
     <View style={styles.header}>
       {album && (
         <View style={styles.albumTitle}>
-          {/* Le titre mène aux réglages de l'album, comme le nom d'un groupe dans une messagerie. */}
-          <Pressable
-            accessibilityLabel="Gérer l'album"
-            accessibilityRole="button"
-            disabled={closing || busy}
-            onPress={() => router.push({ pathname: '/album/manage', params: { albumId } })}
-            hitSlop={8}
-            style={({ pressed }) => [styles.titleButton, pressed && styles.titleButtonPressed]}>
-            <Text style={styles.albumName} numberOfLines={1}>
-              {album.name}
-            </Text>
-            <SymbolView
-              name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-              size={14}
-              weight="heavy"
-              tintColor={Palette.textMuted}
-              fallback={<Text style={styles.titleChevronFallback}>›</Text>}
-            />
-          </Pressable>
+          {/* Pour le propriétaire, le titre mène aux réglages de l'album (comme le nom d'un groupe). */}
+          {album.myRole === 'owner' ? (
+            <Pressable
+              accessibilityLabel="Gérer l'album"
+              accessibilityRole="button"
+              disabled={closing || busy}
+              onPress={() => pushOnce({ pathname: '/album/manage', params: { albumId } })}
+              hitSlop={8}
+              style={({ pressed }) => [styles.titleButton, pressed && styles.titleButtonPressed]}>
+              <Text style={styles.albumName} numberOfLines={1}>
+                {album.name}
+              </Text>
+              {/* Crayon seul, en muted : signale l'édition sans concurrencer le titre. */}
+              <SymbolView
+                name={{ ios: 'square.and.pencil', android: 'edit_square', web: 'edit_square' }}
+                size={18}
+                weight="bold"
+                tintColor={Palette.textMuted}
+                fallback={<Text style={styles.titleChevronFallback}>✎</Text>}
+              />
+            </Pressable>
+          ) : (
+            <View style={styles.titleButton}>
+              <Text style={styles.albumName} numberOfLines={1}>
+                {album.name}
+              </Text>
+            </View>
+          )}
           <Text style={styles.period}>{formatAlbumRange(album)}</Text>
           {/* Qui est dans l'album, et le bouton pour inviter (QR code ou lien). */}
           <View style={styles.membersRow}>
@@ -186,7 +203,7 @@ export default function AlbumScreen() {
               accessibilityLabel={`Voir les ${album.members.length} membres`}
               accessibilityRole="button"
               disabled={closing || busy}
-              onPress={() => router.push({ pathname: '/album/members', params: { albumId } })}
+              onPress={() => pushOnce({ pathname: '/album/members', params: { albumId } })}
               hitSlop={8}
               style={({ pressed }) => pressed && styles.pressed}>
               <AvatarStack members={album.members} />
@@ -209,7 +226,25 @@ export default function AlbumScreen() {
           </View>
         </View>
       )}
-      {/* En sélection : bandeau qui explique ce qui a été pré-coché. */}
+      {/* En sélection : bandeau qui explique ce qui a été pré-coché, avec tout / rien. */}
+      {(selecting || managing) && (
+        <Animated.View entering={FadeIn.duration(200)} style={styles.bannerWrap}>
+          <View style={styles.selectAllRow}>
+            <Text style={styles.selectAllCount}>
+              {selectedCountAll} / {photos.length} sélectionnée{selectedCountAll > 1 ? 's' : ''}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={allSelected ? clearAllCurrent : selectAllCurrent}
+              hitSlop={8}
+              style={({ pressed }) => [styles.selectAllButton, pressed && styles.pressed]}>
+              <Text style={styles.selectAllLabel}>
+                {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      )}
       {selecting && (
         <Animated.View entering={FadeIn.duration(200)} style={styles.banner}>
           <View style={styles.bannerIcon}>
@@ -349,7 +384,7 @@ export default function AlbumScreen() {
       {!downloadPill && !managing && (
         <AddButton
           accessibilityLabel="Trier mes photos de la période"
-          onPress={() => router.push({ pathname: '/swipe', params: { albumId } })}
+          onPress={() => pushOnce({ pathname: '/swipe', params: { albumId } })}
           bottom={insets.bottom + Spacing.four}
         />
       )}
@@ -547,7 +582,7 @@ const styles = StyleSheet.create({
   },
   titleChevronFallback: {
     color: Palette.textMuted,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
   },
   membersRow: {
@@ -577,15 +612,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
   },
+  bannerWrap: {
+    marginTop: Spacing.one,
+  },
+  selectAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.one,
+  },
+  selectAllCount: {
+    color: Palette.textMuted,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  selectAllButton: {
+    height: 32,
+    paddingHorizontal: Spacing.two + Spacing.one,
+    borderRadius: Radii.pill,
+    backgroundColor: Palette.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectAllLabel: {
+    color: Palette.pink,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '800',
+  },
   /** Bandeau d'information : carte blanche arrondie, icône rose, texte muted. */
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two + Spacing.one,
     // Sous le bandeau : padding bas de l'en-tête (16) + espacement de la grille (8) = 24.
-    // Au-dessus : gap de l'en-tête (16) + cette marge (4) = 20, car la ligne de la date
-    // garde ~4 pt vides sous ses lettres : à l'œil les deux marges sont égales.
-    marginTop: Spacing.one,
+    marginTop: Spacing.two,
     paddingVertical: Spacing.two + Spacing.one,
     paddingHorizontal: Spacing.three,
     borderRadius: Radii.tile,

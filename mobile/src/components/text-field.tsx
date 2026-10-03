@@ -6,6 +6,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 
 type Props = Omit<TextInputProps, 'style'> & {
+  /** Référence vers le champ natif, pour un focus différé par exemple. */
+  inputRef?: React.Ref<TextInput>;
   label: string;
   value: string;
   onChangeText: (value: string) => void;
@@ -20,7 +22,15 @@ const FOCUS_MS = 150;
  * Champ de saisie : carte blanche arrondie, libellé au-dessus, bordure rose au focus,
  * bouton d'effacement quand le champ a du contenu, message d'aide ou d'erreur dessous.
  */
-export function TextField({ label, value, onChangeText, error, hint, ...inputProps }: Props) {
+export function TextField({
+  label,
+  value,
+  onChangeText,
+  error,
+  hint,
+  inputRef,
+  ...inputProps
+}: Props) {
   const [focused, setFocused] = useState(false);
   const focus = useSharedValue(0);
 
@@ -33,6 +43,7 @@ export function TextField({ label, value, onChangeText, error, hint, ...inputPro
       <Text style={styles.label}>{label}</Text>
       <Animated.View style={[styles.frame, frameStyle]}>
         <TextInput
+          ref={inputRef}
           {...inputProps}
           value={value}
           onChangeText={onChangeText}

@@ -1,8 +1,16 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DateField } from '@/components/date-field';
@@ -75,10 +83,15 @@ export default function ManageAlbumScreen() {
           <Text style={styles.errorText}>Impossible de charger l&apos;album.</Text>
         )}
 
-        {album && (
+        {/* Réservé au propriétaire ; un membre arrivé ici par un lien ne voit qu'un message. */}
+        {album && !canEditAlbum(album.myRole) && (
+          <Text style={styles.errorText}>Seul le propriétaire peut gérer cet album.</Text>
+        )}
+        {album && canEditAlbum(album.myRole) && (
           <>
             <CoverSection album={album} onUpdated={setAlbum} />
             <InfoSection album={album} onUpdated={setAlbum} />
+            <DeleteAlbumLink album={album} />
           </>
         )}
       </ScrollView>
@@ -173,6 +186,48 @@ function InfoSection({ album, onUpdated }: SectionProps) {
         </Pressable>
       )}
     </View>
+  );
+}
+
+/** Suppression de l'album : lien discret en bas, confirmé, puis retour à la liste. */
+function DeleteAlbumLink({ album }: { album: Album }) {
+  const [deleting, setDeleting] = useState(false);
+  const confirm = () => {
+    const n = album.photoCount;
+    Alert.alert(
+      `Supprimer « ${album.name} » ?`,
+      `L'album et ses ${n} photo${n > 1 ? 's' : ''} seront effacés pour tous les membres. Cette action est irréversible.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: "Supprimer l'album",
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await albumApi.deleteAlbum(album.id);
+              router.dismissAll();
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={deleting}
+      onPress={confirm}
+      hitSlop={8}
+      style={({ pressed }) => [styles.deleteLink, pressed && styles.pressed]}>
+      {deleting ? (
+        <ActivityIndicator size="small" color={Palette.textMuted} />
+      ) : (
+        <Text style={styles.deleteText}>Supprimer l&apos;album</Text>
+      )}
+    </Pressable>
   );
 }
 
@@ -387,6 +442,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '600',
     paddingHorizontal: Spacing.one,
+  },
+  deleteLink: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.two,
+  },
+  deleteText: {
+    color: Palette.textMuted,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   pressed: {
     opacity: 0.8,
