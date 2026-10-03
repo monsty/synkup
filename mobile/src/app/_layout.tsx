@@ -1,3 +1,5 @@
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StyleSheet, useColorScheme, View } from 'react-native';
@@ -7,19 +9,29 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Palette } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+
+if (!publishableKey) {
+  throw new Error(
+    'Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Add your key to .env.local.\nRun: 1) clerk auth login  2) clerk link  3) clerk env pull — then restart the dev server.'
+  );
+}
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <AuthProvider>
-          <AnimatedSplashOverlay />
-          <RootNavigator />
-        </AuthProvider>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <GestureHandlerRootView style={styles.root}>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <AuthProvider>
+            <AnimatedSplashOverlay />
+            <RootNavigator />
+          </AuthProvider>
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </ClerkProvider>
   );
 }
 
