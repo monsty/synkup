@@ -81,14 +81,17 @@ export default function AlbumScreen() {
   };
   const selectedCount = download.selectedIds.size;
 
+  // En sélection (téléchargement ou gestion), le bouton de téléchargement devient la croix
+  // qui ferme la sélection : même geste que le bouton de sortie en bas à gauche.
+  const closing = selecting || managing;
   const downloadButton = (
     <Pressable
       accessibilityLabel={
-        selecting ? 'Annuler la sélection' : 'Enregistrer des photos sur le téléphone'
+        closing ? 'Quitter la sélection' : 'Enregistrer des photos sur le téléphone'
       }
       accessibilityRole="button"
-      disabled={status !== 'ready' || busy || managing}
-      onPress={selecting ? download.cancel : download.start}
+      disabled={status !== 'ready' || busy || deleting}
+      onPress={managing ? stopManaging : selecting ? download.cancel : download.start}
       hitSlop={8}
       style={({ pressed }) => [styles.downloadButton, pressed && styles.pressed]}>
       {busy ? (
@@ -96,14 +99,14 @@ export default function AlbumScreen() {
       ) : (
         <SymbolView
           name={
-            selecting
+            closing
               ? { ios: 'xmark', android: 'close', web: 'close' }
               : { ios: 'arrow.down.to.line', android: 'download', web: 'download' }
           }
           size={18}
           weight="heavy"
           tintColor={Palette.pink}
-          fallback={<Text style={styles.downloadFallback}>{selecting ? '✕' : '↓'}</Text>}
+          fallback={<Text style={styles.downloadFallback}>{closing ? '✕' : '↓'}</Text>}
         />
       )}
     </Pressable>

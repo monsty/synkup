@@ -129,7 +129,8 @@ rose à la place de l'icône pendant l'action.
   blanc enfant à 22 %. Jamais d'opacité sur le verre lui-même ni sur ses parents.
   Mode gestion (tap long de 350 ms sur une tuile, retour haptique moyen) : la tuile est
   cochée, la grille passe en sélection avec les mêmes cases que le téléchargement, le bouton de
-  téléchargement est inactif et le + disparaît. Zone des boutons en bas : à gauche le rond gris
+  téléchargement devient ✕ (quitte la sélection, comme le bouton de sortie en bas) et le +
+  disparaît. Zone des boutons en bas : à gauche le rond gris
   de sortie (flèche retour rose), collé à droite un rond `text` sombre de 68 avec une corbeille
   blanche (`trash` / `delete`) et une pastille rose du nombre coché. La suppression passe par
   l'alerte système (« Supprimer N photos ? », bouton destructif), puis la grille se met à jour.
