@@ -69,7 +69,16 @@ type Props = {
  */
 export function PhotoViewer({ photos, initialIndex, onClose }: Props) {
   const retryExpired = useExpiredUrlRetry('photos');
-  const [index, setIndex] = useState(initialIndex);
+  // On suit la photo par son identifiant, pas par sa position : la liste peut changer sous
+  // nos pieds (une photo arrive en arrière-plan, une autre est supprimée) sans que la photo
+  // affichée change. Si elle disparaît de la liste, on reste à la même position, bornée.
+  const [current, setCurrent] = useState(() => ({
+    id: photos[initialIndex]?.id ?? null,
+    index: initialIndex,
+  }));
+  const foundIndex = photos.findIndex((p) => p.id === current.id);
+  const index =
+    foundIndex >= 0 ? foundIndex : Math.max(0, Math.min(current.index, photos.length - 1));
   const [closing, setClosing] = useState(false);
   const overlayOpacity = useSharedValue(1);
   // Si le parent démonte avant la fin du fondu (nouvelle ouverture), on n'appelle pas onClose.
@@ -140,7 +149,7 @@ export function PhotoViewer({ photos, initialIndex, onClose }: Props) {
     // La nouvelle photo entre par le côté opposé à la sortie de l'ancienne.
     slideX.set(direction * width);
     slideX.set(withTiming(0, { duration: SLIDE_IN_DURATION_MS }));
-    setIndex(next);
+    setCurrent({ id: photos[next]?.id ?? null, index: next });
   };
 
   const pan = Gesture.Pan()

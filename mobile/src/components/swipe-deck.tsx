@@ -199,15 +199,17 @@ export function SwipeDeck({ photos, onDecide }: SwipeDeckProps) {
 
       <View style={styles.actions}>
         <Pressable
-          accessibilityLabel="Passer cette photo"
+          accessibilityLabel="Garder cette photo pour moi"
           onPress={() => topCardRef.current?.swipe('skipped')}
           style={({ pressed }) => [styles.skipButton, pressed && styles.pressed]}>
+          {/* Œil barré plutôt que ✕ : « passer » veut dire garder la photo pour soi, et le ✕
+              de fermeture est déjà en haut de l'écran. */}
           <SymbolView
-            name={{ ios: 'xmark', android: 'close', web: 'close' }}
+            name={{ ios: 'eye.slash.fill', android: 'visibility_off', web: 'visibility_off' }}
             size={24}
-            weight="heavy"
+            weight="bold"
             tintColor={Palette.pink}
-            fallback={<Text style={styles.skipFallback}>✕</Text>}
+            fallback={<Text style={styles.skipFallback}>⊘</Text>}
           />
         </Pressable>
 

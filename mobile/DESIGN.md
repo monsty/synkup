@@ -268,7 +268,9 @@ rose à la place de l'icône pendant l'action.
   l'icône nuage-flèche blanche seule (pas de libellé). Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
   qu'une fois le nombre connu.
 - Visualiseur photo : calque rendu par-dessus l'album (pas une route : ouverture et fermeture
-  sont un changement d'état, fondu 120 ms, pour ne jamais bloquer les touches). Même fond dépoli. En-tête ✕ + marque + étiquette « 3 / 32 ». Photo dans une
+  sont un changement d'état, fondu 120 ms, pour ne jamais bloquer les touches). Il suit la photo
+  par son identifiant : une photo qui arrive en arrière-plan ou une suppression ne change pas
+  celle qu'on regarde. Même fond dépoli. En-tête ✕ + marque + étiquette « 3 / 32 ». Photo dans une
   carte arrondie 40 au ratio de l'image, bornée par l'écran. En bas, une pilule grise avec
   l'auteur en gras puis la date en muted. Les gestes couvrent tout l'écran, pas seulement la
   photo : on peut glisser à côté d'une petite photo. Fermeture : ✕, tap hors de la photo, ou
@@ -292,7 +294,7 @@ rose à la place de l'icône pendant l'action.
 
 `expo-symbols` avec un nom par plateforme (`{ ios, android, web }`) et un `fallback` texte.
 Poids `bold` ou `heavy`. Envoyer : `icloud.and.arrow.up` / `cloud_upload` (nuage avec flèche montante, trait fin `semibold`).
-Passer et fermer : `xmark` / `close`. Ajouter : `plus` / `add`.
+Fermer : `xmark` / `close`. Passer (garder la photo pour soi, pour ne pas doubler le ✕ de fermeture) : `eye.slash.fill` / `visibility_off`. Ajouter : `plus` / `add`.
 Galerie : `photo.on.rectangle.angled` / `photo_library`. Photo de profil : `camera.fill` /
 `photo_camera`. Retour d'écran empilé : `chevron.left` / `arrow_back`.
 
