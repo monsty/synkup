@@ -1,0 +1,23 @@
+# Base Postgres locale pour le développement : `docker compose up -d`.
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: synkup-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: synkup
+      POSTGRES_PASSWORD: synkup
+      POSTGRES_DB: synkup
+    ports:
+      - '5432:5432'
+    volumes:
+      # Postgres 18 range ses données sous /var/lib/postgresql/<version>.
+      - synkup-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U synkup -d synkup']
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  synkup-pgdata:

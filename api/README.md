@@ -5,11 +5,13 @@ API NestJS de Synkup : utilisateurs, albums, membres et photos. Postgres via Pri
 ## Démarrer
 
 ```bash
-nvm use                 # Node 24 (voir .nvmrc)
+nvm use                    # Node 24 (voir .nvmrc)
 npm install
-cp .env.example .env    # puis renseigner DATABASE_URL
-npx prisma migrate dev  # crée la base et génère le client
-npm run start:dev       # http://localhost:3000
+cp .env.example .env       # pointe déjà sur la base Docker locale
+docker compose up -d       # Postgres 18 sur localhost:5432
+npx prisma migrate deploy  # applique les migrations
+npx prisma generate        # génère le client dans src/generated
+npm run start:dev          # http://localhost:3000
 ```
 
 ## Authentification
