@@ -152,21 +152,6 @@ export default function AlbumScreen() {
           <Text style={styles.countUnit}>photo{photos.length > 1 ? 's' : ''}</Text>
         </Animated.View>
       )}
-      <Pressable
-        accessibilityLabel="Gérer l'album"
-        accessibilityRole="button"
-        disabled={status !== 'ready' || closing || busy}
-        onPress={() => router.push({ pathname: '/album/manage', params: { albumId } })}
-        hitSlop={8}
-        style={({ pressed }) => [styles.downloadButton, pressed && styles.pressed]}>
-        <SymbolView
-          name={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
-          size={18}
-          weight="bold"
-          tintColor={Palette.pink}
-          fallback={<Text style={styles.downloadFallback}>⚙</Text>}
-        />
-      </Pressable>
       {downloadButton}
     </View>
   );
@@ -175,7 +160,25 @@ export default function AlbumScreen() {
     <View style={styles.header}>
       {album && (
         <View style={styles.albumTitle}>
-          <Text style={styles.albumName}>{album.name}</Text>
+          {/* Le titre mène aux réglages de l'album, comme le nom d'un groupe dans une messagerie. */}
+          <Pressable
+            accessibilityLabel="Gérer l'album"
+            accessibilityRole="button"
+            disabled={closing || busy}
+            onPress={() => router.push({ pathname: '/album/manage', params: { albumId } })}
+            hitSlop={8}
+            style={({ pressed }) => [styles.titleButton, pressed && styles.titleButtonPressed]}>
+            <Text style={styles.albumName} numberOfLines={1}>
+              {album.name}
+            </Text>
+            <SymbolView
+              name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+              size={14}
+              weight="heavy"
+              tintColor={Palette.textMuted}
+              fallback={<Text style={styles.titleChevronFallback}>›</Text>}
+            />
+          </Pressable>
           <Text style={styles.period}>{formatAlbumRange(album)}</Text>
           {/* Qui est dans l'album, et le bouton pour inviter (QR code ou lien). */}
           <View style={styles.membersRow}>
@@ -385,11 +388,10 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
     gap: Spacing.three,
   },
-  // Serré : étiquette + engrenage + téléchargement doivent laisser la marque entière.
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.one,
+    gap: Spacing.two,
   },
   downloadButton: {
     width: 40,
@@ -506,7 +508,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one + Spacing.half,
     height: 40,
-    marginRight: Spacing.one,
+    paddingHorizontal: Spacing.one,
   },
   countValue: {
     color: Palette.text,
@@ -524,6 +526,21 @@ const styles = StyleSheet.create({
   albumTitle: {
     alignItems: 'center',
     gap: Spacing.half,
+  },
+  titleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one + Spacing.half,
+    maxWidth: '100%',
+    paddingHorizontal: Spacing.two,
+  },
+  titleButtonPressed: {
+    opacity: 0.6,
+  },
+  titleChevronFallback: {
+    color: Palette.textMuted,
+    fontSize: 18,
+    fontWeight: '900',
   },
   membersRow: {
     flexDirection: 'row',
@@ -588,6 +605,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   albumName: {
+    flexShrink: 1,
     color: Palette.text,
     fontFamily: Fonts.rounded,
     fontSize: 26,
