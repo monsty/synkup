@@ -22,6 +22,67 @@ import { useAuth } from '@/providers/auth-provider';
 import type { Album } from '@/types/album';
 
 /** « 4 albums · 2 créés par toi », « 1 album », « 2 albums créés par toi ». */
+/**
+ * Premier lancement sans album : on explique le principe en trois gestes et on pousse vers la
+ * création. Le + flottant reste là, mais l'état vide doit se suffire à lui-même.
+ */
+function EmptyAlbums({ onCreate }: { onCreate: () => void }) {
+  return (
+    <View style={styles.emptyState}>
+      <View style={styles.emptyHero}>
+        {EMPTY_HERO.map((card, index) => (
+          <View
+            key={card.emoji}
+            style={[
+              styles.emptyHeroCard,
+              {
+                transform: [{ translateX: card.offset }, { rotate: card.rotate }],
+                zIndex: index === 1 ? 2 : 1,
+              },
+            ]}>
+            <Text style={styles.emptyHeroEmoji}>{card.emoji}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={styles.emptyTitle}>Ton premier album t&apos;attend</Text>
+      <Text style={styles.emptyBody}>
+        Crée un album pour un week-end, une soirée ou des vacances, invite tes amis, et chacun
+        glisse ses photos dedans. Tout le monde repart avec tout.
+      </Text>
+      <View style={styles.emptySteps}>
+        {EMPTY_STEPS.map((step, index) => (
+          <View key={step} style={styles.emptyStep}>
+            <View style={styles.emptyStepNumber}>
+              <Text style={styles.emptyStepNumberText}>{index + 1}</Text>
+            </View>
+            <Text style={styles.emptyStepText}>{step}</Text>
+          </View>
+        ))}
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Créer mon premier album"
+        onPress={onCreate}
+        style={({ pressed }) => [styles.emptyButton, pressed && styles.pressed]}>
+        <Text style={styles.emptyButtonLabel}>Créer mon premier album</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+/** Trois cartes en éventail, écho au paquet de l'écran de tri. */
+const EMPTY_HERO = [
+  { emoji: '🏖️', rotate: '-10deg', offset: -40 },
+  { emoji: '📸', rotate: '0deg', offset: 0 },
+  { emoji: '🎉', rotate: '10deg', offset: 40 },
+];
+
+const EMPTY_STEPS = [
+  'Crée un album avec une période',
+  'Invite tes amis par lien ou QR code',
+  "Swipe tes photos, elles rejoignent l'album",
+];
+
 function ItemGap() {
   return <View style={styles.itemGap} />;
 }
@@ -75,18 +136,20 @@ export default function AlbumsScreen() {
     <View style={styles.header}>
       <View style={styles.titleBlock}>
         <Text style={styles.title}>Mes albums</Text>
-        <Text style={styles.subtitle}>{status === 'ready' ? describeAlbums(albums) : ' '}</Text>
+        <Text style={styles.subtitle}>
+          {status === 'ready' && albums.length > 0 ? describeAlbums(albums) : ' '}
+        </Text>
       </View>
     </View>
   );
 
   const empty =
     status === 'loading' ? (
-      <ActivityIndicator style={styles.empty} color={Palette.pink} />
+      <ActivityIndicator style={styles.errorText} color={Palette.pink} />
     ) : status === 'error' ? (
-      <Text style={[styles.emptyText, styles.empty]}>Impossible de charger tes albums.</Text>
+      <Text style={styles.errorText}>Impossible de charger tes albums.</Text>
     ) : (
-      <Text style={[styles.emptyText, styles.empty]}>Aucun album pour le moment.</Text>
+      <EmptyAlbums onCreate={() => pushOnce('/album/new')} />
     );
 
   return (
@@ -119,11 +182,14 @@ export default function AlbumsScreen() {
         }
       />
 
-      <AddButton
-        accessibilityLabel="Créer un album"
-        onPress={() => pushOnce('/album/new')}
-        bottom={insets.bottom + Spacing.four}
-      />
+      {/* Masqué sur l'état vide : « Créer mon premier album » porte déjà l'action. */}
+      {!(status === 'ready' && albums.length === 0) && (
+        <AddButton
+          accessibilityLabel="Créer un album"
+          onPress={() => pushOnce('/album/new')}
+          bottom={insets.bottom + Spacing.four}
+        />
+      )}
 
       {menuKey !== null && (
         <MenuSheet
@@ -170,6 +236,116 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
   },
+  errorText: {
+    color: Palette.textMuted,
+    fontFamily: Fonts.rounded,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: Spacing.six,
+  },
+  emptyState: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingTop: Spacing.four,
+    paddingHorizontal: Spacing.two,
+  },
+  emptyHero: {
+    height: 132,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.two,
+  },
+  emptyHeroCard: {
+    position: 'absolute',
+    width: 88,
+    height: 112,
+    borderRadius: 20,
+    backgroundColor: Palette.card,
+    borderWidth: 4,
+    borderColor: Palette.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
+  emptyHeroEmoji: {
+    fontSize: 40,
+  },
+  emptyTitle: {
+    color: Palette.text,
+    fontFamily: Fonts.rounded,
+    fontSize: 24,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  emptyBody: {
+    color: Palette.textMuted,
+    fontFamily: Fonts.rounded,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingHorizontal: Spacing.two,
+  },
+  emptySteps: {
+    alignSelf: 'stretch',
+    gap: Spacing.two,
+    marginTop: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radii.tile,
+    backgroundColor: Palette.card,
+  },
+  emptyStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two + Spacing.one,
+  },
+  emptyStepNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Palette.pink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStepNumberText: {
+    color: Palette.onPhoto,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  emptyStepText: {
+    flex: 1,
+    color: Palette.text,
+    fontFamily: Fonts.rounded,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  emptyButton: {
+    alignSelf: 'stretch',
+    height: 56,
+    marginTop: Spacing.two,
+    borderRadius: Radii.pill,
+    backgroundColor: Palette.pink,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  emptyButtonLabel: {
+    color: Palette.onPhoto,
+    fontFamily: Fonts.rounded,
+    fontSize: 17,
+    fontWeight: '800',
+  },
   pressed: {
     opacity: 0.8,
     transform: [{ scale: 0.95 }],
@@ -192,17 +368,5 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  empty: {
-    marginTop: Spacing.six,
-  },
-  emptyText: {
-    color: Palette.textMuted,
-    fontFamily: Fonts.rounded,
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 24,
-    textAlign: 'center',
-    paddingHorizontal: Spacing.four,
   },
 });

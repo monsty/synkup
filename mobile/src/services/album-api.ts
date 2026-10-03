@@ -10,6 +10,7 @@ import {
   type AlbumRole,
   type AlbumPhoto,
 } from '@/types/album';
+import { getCurrentUser } from '@/services/auth-api';
 
 const NETWORK_DELAY_MS = 350;
 const UPLOAD_DELAY_MS = 900;
@@ -24,6 +25,19 @@ const SIZES: [number, number][] = [
 
 /** Identifiant de l'utilisateur courant dans les données de démo. */
 const ME = 'me';
+
+/**
+ * Compte vierge de démo : « Continuer avec Google » n'a aucun album, pour travailler l'état
+ * vide. Les autres comptes (email, Apple) voient les albums de démo.
+ */
+function hasDemoAlbums(): boolean {
+  return getCurrentUser()?.provider !== 'google';
+}
+
+/** Albums visibles par le compte courant. */
+function visibleSeeds(): AlbumSeed[] {
+  return hasDemoAlbums() ? ALBUM_SEEDS : ALBUM_SEEDS.filter((a) => a.createdByCurrentUser);
+}
 
 type Person = Omit<AlbumMember, 'role' | 'photoCount'>;
 
@@ -46,6 +60,8 @@ type AlbumSeed = Omit<
   members: MemberSeed[];
   /** Couverture choisie par le propriétaire ; sinon la dernière photo de l'album. */
   coverUri?: string | null;
+  /** Créé pendant la session par le compte courant (visible même pour un compte vierge). */
+  createdByCurrentUser?: boolean;
   photoCount: number;
   /** Décalage de graine pour que chaque album ait ses propres images. */
   seed: number;
@@ -233,7 +249,7 @@ export const albumApi = {
   /** Albums de l'utilisateur : en cours d'abord, puis à venir, puis terminés du plus récent. */
   async getAlbums(): Promise<Album[]> {
     await delay(NETWORK_DELAY_MS);
-    return sortAlbums(ALBUM_SEEDS.map(toAlbum));
+    return sortAlbums(visibleSeeds().map(toAlbum));
   },
 
   /** Crée un album dont je suis le seul membre pour l'instant ; les invitations viendront après. */
@@ -246,6 +262,7 @@ export const albumApi = {
       endDate: input.endDate,
       members: [{ id: ME, role: 'owner' }],
       photoCount: 0,
+      createdByCurrentUser: true,
       seed: 0,
     };
     ALBUM_SEEDS.push(seed);
@@ -256,7 +273,7 @@ export const albumApi = {
 
   async getAlbum(albumId: string): Promise<Album | null> {
     await delay(NETWORK_DELAY_MS);
-    const seed = ALBUM_SEEDS.find((a) => a.id === albumId);
+    const seed = visibleSeeds().find((a) => a.id === albumId);
     return seed ? toAlbum(seed) : null;
   },
 
@@ -286,7 +303,7 @@ export const albumApi = {
    */
   async getMyUsage(): Promise<{ photos: number; albums: number }> {
     await delay(NETWORK_DELAY_MS);
-    const owned = ALBUM_SEEDS.filter((a) =>
+    const owned = visibleSeeds().filter((a) =>
       a.members.some((m) => m.id === ME && m.role === 'owner')
     );
     const photos = owned.reduce((sum, a) => sum + (photosByAlbum.get(a.id)?.length ?? 0), 0);

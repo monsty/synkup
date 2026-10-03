@@ -74,6 +74,12 @@ rose à la place de l'icône pendant l'action.
   Étape code : `TextField` numérique 6 chiffres avec autocomplétion du code reçu, pilule rose
   « Me connecter », lien rose « Renvoyer le code ». Chevron retour à gauche de la marque sur
   les étapes 2 et 3. Pas de mot de passe : connexion par code, Apple ou Google uniquement.
+- Mes albums, état vide (aucun album ; le compte de démo « Continuer avec Google » démarre
+  ainsi) : sous-titre masqué, trois cartes `card` en éventail (88×112, arrondi 20, bord
+  `background` 4, rotations −10°/0°/10°) avec un émoji chacune, titre 24 « Ton premier album
+  t'attend », phrase muted qui explique le principe, carte `card` arrondie 18 listant trois
+  étapes numérotées (rond rose 28), pilule rose 56 « Créer mon premier album ». Le + flottant
+  est masqué sur cet état, le bouton le remplace.
 - Mes albums (accueil) : bouton + flottant (`AddButton`, Liquid Glass) pour créer un album ;
   marque + bouton menu rond gris avec une icône utilisateur (`person.fill` / `person`) à
   droite, titre « Mes albums », sous-titre « N albums · M créés par toi » (ou « N albums » si aucun n'est à toi, « N albums
