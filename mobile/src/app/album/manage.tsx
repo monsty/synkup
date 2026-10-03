@@ -70,7 +70,8 @@ export default function ManageAlbumScreen() {
         scrollEventThrottle={16}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: Spacing.two, paddingBottom: insets.bottom + Spacing.six + Spacing.four },
+          // Juste la zone sûre : le clavier est géré par l'ajustement automatique des insets.
+          { paddingTop: Spacing.two, paddingBottom: insets.bottom + Spacing.two },
         ]}>
         <View style={styles.titleBlock}>
           <Text style={styles.title}>Gérer l&apos;album</Text>
