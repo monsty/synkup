@@ -40,6 +40,7 @@ function RootNavigator() {
       <Stack.Protected guard={signedIn}>
         <Stack.Screen name="index" options={{ animation: 'fade' }} />
         <Stack.Screen name="album/new" />
+        <Stack.Screen name="album/manage" />
         <Stack.Screen name="album/[id]" />
         <Stack.Screen name="profile" />
         <Stack.Screen

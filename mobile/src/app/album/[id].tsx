@@ -7,7 +7,9 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProgressModal } from '@/components/progress-modal';
+import { ShareSheet } from '@/components/share-sheet';
 import { ADD_BUTTON_SIZE, AddButton } from '@/components/add-button';
+import { AvatarStack } from '@/components/avatar-stack';
 import { PageLoader } from '@/components/page-loader';
 import { PhotoGrid } from '@/components/photo-grid';
 import { PhotoViewer } from '@/components/photo-viewer';
@@ -31,6 +33,8 @@ export default function AlbumScreen() {
   const [viewer, setViewer] = useState<{ index: number; key: number } | null>(null);
   // Filet sous l'en-tête collant dès que la grille a défilé.
   const [scrolled, setScrolled] = useState(false);
+  // Feuille de partage en calque ; clé unique par ouverture (voir BottomSheet).
+  const [shareKey, setShareKey] = useState<number | null>(null);
   const openViewer = (index: number) => setViewer((v) => ({ index, key: (v?.key ?? 0) + 1 }));
   const selecting = download.mode === 'selecting';
   const busy = download.mode === 'running';
@@ -148,6 +152,21 @@ export default function AlbumScreen() {
           <Text style={styles.countUnit}>photo{photos.length > 1 ? 's' : ''}</Text>
         </Animated.View>
       )}
+      <Pressable
+        accessibilityLabel="Gérer l'album"
+        accessibilityRole="button"
+        disabled={status !== 'ready' || closing || busy}
+        onPress={() => router.push({ pathname: '/album/manage', params: { albumId } })}
+        hitSlop={8}
+        style={({ pressed }) => [styles.downloadButton, pressed && styles.pressed]}>
+        <SymbolView
+          name={{ ios: 'gearshape', android: 'settings', web: 'settings' }}
+          size={18}
+          weight="bold"
+          tintColor={Palette.pink}
+          fallback={<Text style={styles.downloadFallback}>⚙</Text>}
+        />
+      </Pressable>
       {downloadButton}
     </View>
   );
@@ -158,6 +177,25 @@ export default function AlbumScreen() {
         <View style={styles.albumTitle}>
           <Text style={styles.albumName}>{album.name}</Text>
           <Text style={styles.period}>{formatAlbumRange(album)}</Text>
+          {/* Qui est dans l'album, et le bouton pour inviter (QR code ou lien). */}
+          <View style={styles.membersRow}>
+            <AvatarStack members={album.members} />
+            <Pressable
+              accessibilityLabel="Inviter dans l'album"
+              accessibilityRole="button"
+              disabled={closing || busy}
+              onPress={() => setShareKey((k) => (k ?? 0) + 1)}
+              style={({ pressed }) => [styles.inviteButton, pressed && styles.pressed]}>
+              <SymbolView
+                name={{ ios: 'person.badge.plus', android: 'person_add', web: 'person_add' }}
+                size={16}
+                weight="bold"
+                tintColor={Palette.onPhoto}
+                fallback={<Text style={styles.inviteFallback}>+</Text>}
+              />
+              <Text style={styles.inviteLabel}>Inviter</Text>
+            </Pressable>
+          </View>
         </View>
       )}
       {/* En sélection : bandeau qui explique ce qui a été pré-coché. */}
@@ -307,6 +345,9 @@ export default function AlbumScreen() {
       {status === 'loading' && <PageLoader />}
 
       <ProgressModal overlay={download.overlay} />
+      {album && shareKey !== null && (
+        <ShareSheet key={shareKey} album={album} onClose={() => setShareKey(null)} />
+      )}
       {viewer && (
         <PhotoViewer
           key={viewer.key}
@@ -344,10 +385,11 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.three,
     gap: Spacing.three,
   },
+  // Serré : étiquette + engrenage + téléchargement doivent laisser la marque entière.
   pillRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
+    gap: Spacing.one,
   },
   downloadButton: {
     width: 40,
@@ -464,7 +506,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one + Spacing.half,
     height: 40,
-    paddingHorizontal: Spacing.one,
+    marginRight: Spacing.one,
   },
   countValue: {
     color: Palette.text,
@@ -482,6 +524,33 @@ const styles = StyleSheet.create({
   albumTitle: {
     alignItems: 'center',
     gap: Spacing.half,
+  },
+  membersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two + Spacing.one,
+    marginTop: Spacing.two,
+  },
+  inviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one + Spacing.half,
+    height: 36,
+    paddingLeft: Spacing.two + Spacing.one,
+    paddingRight: Spacing.three,
+    borderRadius: Radii.pill,
+    backgroundColor: Palette.pink,
+  },
+  inviteLabel: {
+    color: Palette.onPhoto,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  inviteFallback: {
+    color: Palette.onPhoto,
+    fontSize: 16,
+    fontWeight: '900',
   },
   /** Bandeau d'information : carte blanche arrondie, icône rose, texte muted. */
   banner: {

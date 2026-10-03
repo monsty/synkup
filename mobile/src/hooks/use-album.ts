@@ -37,7 +37,12 @@ export function useAlbum(albumId: string) {
       });
 
     const unsubscribe = albumApi.subscribe((changedAlbumId, nextPhotos) => {
-      if (changedAlbumId === albumId) setPhotos(nextPhotos);
+      if (changedAlbumId !== albumId) return;
+      setPhotos(nextPhotos);
+      // Le nom, la période ou les membres ont pu changer (écran de gestion).
+      albumApi.getAlbum(albumId).then((result) => {
+        if (active && result) setAlbum(result);
+      });
     });
     return () => {
       active = false;

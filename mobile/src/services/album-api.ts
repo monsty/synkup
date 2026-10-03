@@ -7,6 +7,7 @@ import {
   getAlbumRange,
   type Album,
   type AlbumMember,
+  type AlbumRole,
   type AlbumPhoto,
 } from '@/types/album';
 
@@ -21,7 +22,12 @@ const SIZES: [number, number][] = [
   [900, 600],
 ];
 
-const PEOPLE: AlbumMember[] = [
+/** Identifiant de l'utilisateur courant dans les données de démo. */
+const ME = 'me';
+
+type Person = Omit<AlbumMember, 'role'>;
+
+const PEOPLE: Person[] = [
   { id: 'me', name: 'Moi', avatarUri: 'https://i.pravatar.cc/120?img=12' },
   { id: 'lea', name: 'Léa', avatarUri: 'https://i.pravatar.cc/120?img=47' },
   { id: 'mehdi', name: 'Mehdi', avatarUri: 'https://i.pravatar.cc/120?img=33' },
@@ -31,8 +37,10 @@ const PEOPLE: AlbumMember[] = [
   { id: 'sacha', name: 'Sacha', avatarUri: 'https://i.pravatar.cc/120?img=68' },
 ];
 
-type AlbumSeed = Omit<Album, 'coverUri' | 'photoCount' | 'members'> & {
-  memberIds: string[];
+type MemberSeed = { id: string; role: AlbumRole };
+
+type AlbumSeed = Omit<Album, 'coverUri' | 'photoCount' | 'members' | 'myRole'> & {
+  members: MemberSeed[];
   photoCount: number;
   /** Décalage de graine pour que chaque album ait ses propres images. */
   seed: number;
@@ -45,7 +53,12 @@ const ALBUM_SEEDS: AlbumSeed[] = [
     name: 'Week-end à Lisbonne',
     startDate: '2026-10-02',
     endDate: '2026-10-05',
-    memberIds: ['me', 'lea', 'mehdi', 'camille'],
+    members: [
+      { id: 'me', role: 'owner' },
+      { id: 'lea', role: 'member' },
+      { id: 'mehdi', role: 'member' },
+      { id: 'camille', role: 'member' },
+    ],
     photoCount: 12,
     seed: 200,
   },
@@ -54,7 +67,14 @@ const ALBUM_SEEDS: AlbumSeed[] = [
     name: 'Anniversaire de Léa',
     startDate: '2026-10-17',
     endDate: '2026-10-17',
-    memberIds: ['me', 'lea', 'jules', 'ines', 'sacha', 'camille'],
+    members: [
+      { id: 'lea', role: 'owner' },
+      { id: 'jules', role: 'member' },
+      { id: 'me', role: 'member' },
+      { id: 'ines', role: 'member' },
+      { id: 'sacha', role: 'member' },
+      { id: 'camille', role: 'member' },
+    ],
     photoCount: 0,
     seed: 300,
   },
@@ -63,7 +83,14 @@ const ALBUM_SEEDS: AlbumSeed[] = [
     name: 'Septembre entre potes',
     startDate: '2026-09-01',
     endDate: '2026-09-30',
-    memberIds: ['me', 'lea', 'mehdi', 'camille', 'jules', 'ines'],
+    members: [
+      { id: 'me', role: 'owner' },
+      { id: 'lea', role: 'member' },
+      { id: 'mehdi', role: 'member' },
+      { id: 'camille', role: 'member' },
+      { id: 'jules', role: 'member' },
+      { id: 'ines', role: 'member' },
+    ],
     photoCount: 30,
     seed: 0,
   },
@@ -72,7 +99,11 @@ const ALBUM_SEEDS: AlbumSeed[] = [
     name: "Vacances d'été",
     startDate: '2026-08-10',
     endDate: '2026-08-24',
-    memberIds: ['me', 'sacha', 'jules'],
+    members: [
+      { id: 'sacha', role: 'owner' },
+      { id: 'me', role: 'member' },
+      { id: 'jules', role: 'member' },
+    ],
     photoCount: 48,
     seed: 400,
   },
@@ -95,7 +126,7 @@ function dateIn(album: AlbumSeed, index: number): Date {
 }
 
 function seedPhotos(album: AlbumSeed): AlbumPhoto[] {
-  const authors = album.memberIds.map((id) => PEOPLE.find((p) => p.id === id)?.name ?? 'Invité');
+  const authors = album.members.map((m) => PEOPLE.find((p) => p.id === m.id)?.name ?? 'Invité');
   return Array.from({ length: album.photoCount }, (_, i) => {
     const [width, height] = SIZES[i % SIZES.length];
     const n = album.seed + i;
@@ -121,17 +152,28 @@ const photosByAlbum = new Map<string, AlbumPhoto[]>(
 
 function toAlbum(seed: AlbumSeed): Album {
   const photos = photosByAlbum.get(seed.id) ?? [];
+  const members = seed.members
+    .map((m) => {
+      const person = PEOPLE.find((p) => p.id === m.id);
+      return person ? { ...person, role: m.role } : null;
+    })
+    .filter((m): m is AlbumMember => !!m);
   return {
     id: seed.id,
     name: seed.name,
     startDate: seed.startDate,
     endDate: seed.endDate,
     coverUri: photos[0]?.uri ?? null,
-    members: seed.memberIds
-      .map((id) => PEOPLE.find((p) => p.id === id))
-      .filter((p): p is AlbumMember => !!p),
+    members,
     photoCount: photos.length,
+    myRole: seed.members.find((m) => m.id === ME)?.role ?? 'member',
   };
+}
+
+function findSeed(albumId: string): AlbumSeed {
+  const seed = ALBUM_SEEDS.find((a) => a.id === albumId);
+  if (!seed) throw new Error('Album introuvable.');
+  return seed;
 }
 
 type Listener = (albumId: string, photos: AlbumPhoto[]) => void;
@@ -147,6 +189,8 @@ export type CreateAlbumInput = {
   startDate: string;
   endDate: string;
 };
+
+export type UpdateAlbumInput = Partial<CreateAlbumInput>;
 
 /** En cours d'abord, puis à venir (le plus proche en premier), puis terminés (le plus récent). */
 function sortAlbums(albums: Album[]): Album[] {
@@ -188,7 +232,7 @@ export const albumApi = {
       name: input.name,
       startDate: input.startDate,
       endDate: input.endDate,
-      memberIds: ['me'],
+      members: [{ id: ME, role: 'owner' }],
       photoCount: 0,
       seed: 0,
     };
@@ -232,6 +276,39 @@ export const albumApi = {
       photosShared += photos.filter((p) => p.authorName === 'Moi').length;
     }
     return { albums: ALBUM_SEEDS.length, photosShared };
+  },
+
+  /** Modifie le nom ou la période. POC : sans contrôle de rôle côté serveur. */
+  async updateAlbum(albumId: string, input: UpdateAlbumInput): Promise<Album> {
+    await delay(NETWORK_DELAY_MS);
+    const seed = findSeed(albumId);
+    if (input.name !== undefined) seed.name = input.name;
+    if (input.startDate !== undefined) seed.startDate = input.startDate;
+    if (input.endDate !== undefined) seed.endDate = input.endDate;
+    notify(albumId);
+    return toAlbum(seed);
+  },
+
+  /** Change le rôle d'un membre. Nommer un nouveau propriétaire rétrograde l'ancien en membre. */
+  async updateMemberRole(albumId: string, memberId: string, role: AlbumRole): Promise<Album> {
+    await delay(NETWORK_DELAY_MS);
+    const seed = findSeed(albumId);
+    const target = seed.members.find((m) => m.id === memberId);
+    if (!target) throw new Error('Membre introuvable.');
+    if (role === 'owner') {
+      for (const m of seed.members) if (m.role === 'owner') m.role = 'member';
+    }
+    target.role = role;
+    notify(albumId);
+    return toAlbum(seed);
+  },
+
+  async removeMember(albumId: string, memberId: string): Promise<Album> {
+    await delay(NETWORK_DELAY_MS);
+    const seed = findSeed(albumId);
+    seed.members = seed.members.filter((m) => m.id !== memberId);
+    notify(albumId);
+    return toAlbum(seed);
   },
 
   /** Supprime des photos de l'album. POC : sans contrôle d'auteur. */

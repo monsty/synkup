@@ -1,9 +1,33 @@
+/** Rôle d'un membre dans un album. Un seul propriétaire par album. */
+export type AlbumRole = 'owner' | 'member';
+
+export const ROLE_LABEL: Record<AlbumRole, string> = {
+  owner: 'Propriétaire',
+  member: 'Membre',
+};
+
 /** Une personne ayant accès à un album. */
 export type AlbumMember = {
   id: string;
   name: string;
   avatarUri: string;
+  role: AlbumRole;
 };
+
+/** Seul le propriétaire modifie le nom, la période et gère les membres. */
+export function canEditAlbum(role: AlbumRole): boolean {
+  return role === 'owner';
+}
+
+/** Le propriétaire peut transférer la propriété à un membre. */
+export function assignableRoles(actor: AlbumRole, target: AlbumRole): AlbumRole[] {
+  return actor === 'owner' && target === 'member' ? ['owner'] : [];
+}
+
+/** Le propriétaire retire n'importe quel membre, jamais lui-même. */
+export function canRemoveMember(actor: AlbumRole, target: AlbumRole): boolean {
+  return actor === 'owner' && target === 'member';
+}
 
 /** Un album partagé, borné dans le temps. Les dates sont au format YYYY-MM-DD (local). */
 export type Album = {
@@ -15,6 +39,8 @@ export type Album = {
   coverUri: string | null;
   members: AlbumMember[];
   photoCount: number;
+  /** Mon rôle dans cet album. */
+  myRole: AlbumRole;
 };
 
 export type AlbumStatus = 'upcoming' | 'active' | 'ended';
