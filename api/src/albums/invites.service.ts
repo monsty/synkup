@@ -27,10 +27,8 @@ export class InvitesService {
     private readonly albums: AlbumsService,
     config: ConfigService,
   ) {
-    const base = config.get<string>(
-      'INVITE_BASE_URL',
-      'https://synkup.app/join/',
-    );
+    // Domaine public : uniquement dans la configuration, vérifiée au démarrage.
+    const base = config.getOrThrow<string>('INVITE_BASE_URL');
     this.baseUrl = base.endsWith('/') ? base : `${base}/`;
   }
 

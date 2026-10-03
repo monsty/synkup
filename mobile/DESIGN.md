@@ -117,7 +117,7 @@ rose à la place de l'icône pendant l'action.
 - Inviter (feuille `ShareSheet`, depuis la pilule « Inviter » de l'album) : titre « Inviter dans
   l'album », nom de l'album en muted, QR code 184 (`react-native-qrcode-svg`, encre `text` sur
   `card`) dans une carte bordée `surfaceStrong` avec « Fais scanner ce code avec l'appareil
-  photo », le lien `synkup.app/join/<jeton>` dans une pilule `background` avec icône lien, puis deux
+  photo », le lien `<domaine>/join/<jeton>` (venu de l'API) dans une pilule `background` avec icône lien, puis deux
   pilules 56 : « Copier le lien » grise (devient « Lien copié » avec une coche 1,8 s, via
   `expo-clipboard`) et « Partager » rose (feuille de partage système). Le lien vient de l'API (spinner
   rose à la place du QR le temps de le charger). Propriétaire seulement : « Générer un nouveau

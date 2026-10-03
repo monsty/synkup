@@ -15,8 +15,8 @@ import { describeAlbumStatus, formatAlbumRange } from '@/types/album';
 const AVATAR_SIZE = 32;
 
 /**
- * Ouvert par un lien ou un QR code d'invitation (`https://synkup.app/join/<jeton>`,
- * `synkup://join/<jeton>`). Montre l'album avant de le rejoindre. Route protégée : sans
+ * Ouvert par un lien ou un QR code d'invitation (`https://<domaine>/join/<jeton>`, domaine
+ * fixé par l'API, ou `synkup://join/<jeton>`). Montre l'album avant de le rejoindre. Route protégée : sans
  * session, la connexion s'affiche et l'accueil rouvre l'invitation ensuite.
  */
 export default function JoinScreen() {

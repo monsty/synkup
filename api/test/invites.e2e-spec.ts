@@ -29,7 +29,8 @@ describe('Invitations', () => {
     const second = await linkOf('bob', id);
     expect(second.token).toBe(first.token);
     expect(first.token).toMatch(/^[A-Za-z0-9_-]{22}$/);
-    expect(first.url).toBe(`https://synkup.app/join/${first.token}`);
+    // Domaine pris dans la configuration (INVITE_BASE_URL du test).
+    expect(first.url).toBe(`https://invite.test/join/${first.token}`);
   });
 
   it('refuse le lien à un non-membre', async () => {

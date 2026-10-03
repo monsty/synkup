@@ -3,6 +3,7 @@ import { validateEnv } from './env.js';
 const VALID = {
   DATABASE_URL: 'postgresql://localhost/db',
   CLERK_SECRET_KEY: 'sk_test',
+  INVITE_BASE_URL: 'https://example.com/join/',
   S3_ENDPOINT: 'https://s3.example',
   S3_REGION: 'eu',
   S3_BUCKET: 'bucket',
@@ -30,5 +31,13 @@ describe('validateEnv', () => {
         ALLOW_DEV_TOKENS: 'true',
       }),
     ).toThrow(/production/);
+  });
+
+  it('exige le domaine des liens d’invitation, avec son protocole', () => {
+    const { INVITE_BASE_URL: _omit, ...rest } = VALID;
+    expect(() => validateEnv(rest)).toThrow(/INVITE_BASE_URL/);
+    expect(() =>
+      validateEnv({ ...VALID, INVITE_BASE_URL: 'example.com/join/' }),
+    ).toThrow(/INVITE_BASE_URL/);
   });
 });

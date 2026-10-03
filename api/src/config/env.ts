@@ -4,6 +4,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   Min,
   MinLength,
@@ -42,10 +43,16 @@ class Env {
   @IsIn(['true', 'false'])
   ALLOW_DEV_TOKENS: 'true' | 'false' = 'false';
 
-  /** Début des liens d'invitation partagés (et encodés dans les QR codes). */
-  @IsOptional()
-  @IsString()
-  INVITE_BASE_URL = 'https://synkup.app/join/';
+  /**
+   * Début des liens d'invitation partagés (et encodés dans les QR codes), domaine compris :
+   * `https://<domaine>/join/`. Seule source du domaine public : aucune valeur par défaut.
+   */
+  @IsUrl({
+    require_tld: false,
+    protocols: ['https', 'http'],
+    require_protocol: true,
+  })
+  INVITE_BASE_URL!: string;
 
   @IsString()
   @MinLength(1)

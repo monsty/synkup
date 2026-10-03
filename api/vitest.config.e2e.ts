@@ -19,9 +19,11 @@ export default defineConfig({
     fileParallelism: false,
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: 'postgresql://synkup:synkup@localhost:5432/synkup_test?schema=public',
+      DATABASE_URL:
+        'postgresql://synkup:synkup@localhost:5432/synkup_test?schema=public',
       ALLOW_DEV_TOKENS: 'true',
       CLERK_SECRET_KEY: 'sk_test_unused',
+      INVITE_BASE_URL: 'https://invite.test/join/',
       S3_ENDPOINT: 'https://storage.invalid',
       S3_REGION: 'test',
       S3_BUCKET: 'test',
