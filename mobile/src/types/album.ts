@@ -60,8 +60,11 @@ export function toDateKey(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Bornes d'une période d'album : de quoi situer un album sans le reste de ses données. */
+export type AlbumPeriod = Pick<Album, 'startDate' | 'endDate'>;
+
 /** Où en est l'album par rapport à aujourd'hui. */
-export function getAlbumStatus(album: Album, now = new Date()): AlbumStatus {
+export function getAlbumStatus(album: AlbumPeriod, now = new Date()): AlbumStatus {
   const { start, end } = getAlbumRange(album);
   if (now < start) return 'upcoming';
   if (now > end) return 'ended';
@@ -92,7 +95,7 @@ function daysBetween(from: Date, to: Date): number {
  * Phrase d'état courte pour la liste des albums.
  * Ex. « Se termine dans 3 jours », « Terminé avant-hier », « Commence le 17 oct. »
  */
-export function describeAlbumStatus(album: Album, now = new Date()): string {
+export function describeAlbumStatus(album: AlbumPeriod, now = new Date()): string {
   const { start, end } = getAlbumRange(album);
   const status = getAlbumStatus(album, now);
   if (status === 'active') {
@@ -157,7 +160,7 @@ const shortDateWithYear = new Intl.DateTimeFormat('fr-FR', {
 });
 
 /** Ex. « 1 sept. → 30 sept. 2026 » */
-export function formatAlbumRange(album: Album): string {
+export function formatAlbumRange(album: AlbumPeriod): string {
   const { start, end } = getAlbumRange(album);
   return `${shortDate.format(start)} → ${shortDateWithYear.format(end)}`;
 }

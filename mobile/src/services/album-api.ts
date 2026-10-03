@@ -2,6 +2,13 @@
  * Appels à l'API des albums (`api/`). Pas d'état ici : le cache et les rechargements sont
  * gérés par TanStack Query (`src/queries/albums.ts`).
  */
+import type {
+  AlbumDto,
+  InviteDto,
+  InvitePreviewDto,
+  PhotoDto,
+} from '@synkup/shared';
+
 import { ApiError, apiRequest } from '@/services/api-client';
 import { uploadCover, uploadGalleryPhoto } from '@/services/photo-upload';
 import {
@@ -12,24 +19,6 @@ import {
   type AlbumRole,
   type GalleryPhoto,
 } from '@/types/album';
-
-/** Album tel que renvoyé par l'API. */
-type AlbumDto = Omit<Album, 'coverUri' | 'members'> & {
-  coverUrl: string | null;
-  members: {
-    id: string;
-    name: string;
-    avatarUrl: string | null;
-    role: AlbumRole;
-    photoCount: number;
-  }[];
-};
-
-type PhotoDto = Omit<AlbumPhoto, 'uri' | 'thumbUri' | 'originalUri'> & {
-  displayUrl: string;
-  thumbUrl: string;
-  originalUrl: string;
-};
 
 function toAlbum(dto: AlbumDto): Album {
   return {
@@ -147,5 +136,32 @@ export const albumApi = {
   /** Supprime des photos : les siennes, ou toutes pour le propriétaire. */
   async deletePhotos(albumId: string, photoIds: string[]): Promise<void> {
     await apiRequest<void>('POST', `/albums/${albumId}/photos/delete`, { ids: photoIds });
+  },
+
+  /** Lien d'invitation actif de l'album (créé au premier partage). */
+  async getInvite(albumId: string): Promise<InviteDto> {
+    return apiRequest<InviteDto>('GET', `/albums/${albumId}/invite`);
+  },
+
+  /** Nouveau lien d'invitation ; l'ancien cesse de fonctionner (propriétaire). */
+  async resetInvite(albumId: string): Promise<InviteDto> {
+    return apiRequest<InviteDto>('POST', `/albums/${albumId}/invite/reset`);
+  },
+
+  /** Ce que montre un lien d'invitation ; `null` s'il n'est plus valide. */
+  async previewInvite(token: string): Promise<InvitePreviewDto | null> {
+    try {
+      return await apiRequest<InvitePreviewDto>('GET', `/invites/${encodeURIComponent(token)}`);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
+    }
+  },
+
+  /** Rejoint l'album derrière le lien. */
+  async acceptInvite(token: string): Promise<Album> {
+    return toAlbum(
+      await apiRequest<AlbumDto>('POST', `/invites/${encodeURIComponent(token)}/accept`)
+    );
   },
 };

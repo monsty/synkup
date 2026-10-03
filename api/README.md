@@ -70,8 +70,26 @@ ancienne version des mois, un changement incompatible passera par `/v2`.
 | `POST`   | `/albums/:id/photos/uploads`        | membre        |
 | `POST`   | `/albums/:id/photos`                | membre        |
 | `POST`   | `/albums/:id/photos/delete`         | auteur ou propriétaire |
+| `GET`    | `/albums/:id/invite`                | membre        |
+| `POST`   | `/albums/:id/invite/reset`          | propriétaire  |
+| `GET`    | `/invites/:token`                   | connecté      |
+| `POST`   | `/invites/:token/accept`            | connecté      |
 
 Un album dont on n'est pas membre répond 404, pour ne rien révéler.
+
+## Invitations
+
+Un album a un seul lien actif à la fois (`INVITE_BASE_URL` + jeton aléatoire de 128 bits),
+créé au premier partage. Tout membre peut le partager ; le propriétaire peut le remplacer,
+l'ancien cesse alors de fonctionner. L'aperçu (`GET /invites/:token`) montre l'album sans
+faire rejoindre ; accepter ajoute la personne comme simple membre, sans effet si elle en fait
+déjà partie.
+
+## Contrat avec l'app
+
+Les formes des réponses vivent dans `packages/shared/index.d.ts` (types uniquement, importés
+par `import type` des deux côtés) : un changement casse la compilation de l'app et de l'API
+plutôt que l'app en production.
 
 ## Photos
 

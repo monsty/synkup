@@ -117,9 +117,12 @@ rose à la place de l'icône pendant l'action.
 - Inviter (feuille `ShareSheet`, depuis la pilule « Inviter » de l'album) : titre « Inviter dans
   l'album », nom de l'album en muted, QR code 184 (`react-native-qrcode-svg`, encre `text` sur
   `card`) dans une carte bordée `surfaceStrong` avec « Fais scanner ce code avec l'appareil
-  photo », le lien `synkup.app/join/<id>` dans une pilule `background` avec icône lien, puis deux
+  photo », le lien `synkup.app/join/<jeton>` dans une pilule `background` avec icône lien, puis deux
   pilules 56 : « Copier le lien » grise (devient « Lien copié » avec une coche 1,8 s, via
-  `expo-clipboard`) et « Partager » rose (feuille de partage système).
+  `expo-clipboard`) et « Partager » rose (feuille de partage système). Le lien vient de l'API (spinner
+  rose à la place du QR le temps de le charger). Propriétaire seulement : « Générer un nouveau
+  lien » en lien muted souligné tout en bas, confirmé par une alerte (l'ancien lien cesse de
+  fonctionner).
 - `BottomSheet` : chrome commun des feuilles (menu, partage) : fond dépoli clair à 45 %, carte
   `card` arrondie 40 à 8 px des bords avec poignée, entrée en ressort sans rebond, sortie
   200 ms, fermeture au tap sur le fond, au glissement vers le bas (90 px ou vélocité 700) ou
@@ -153,6 +156,13 @@ rose à la place de l'icône pendant l'action.
   « Libérer 48 Mo ? ») ; « Langue » (une rangée « Langue de l'application · Français » avec
   chevron → `/language`) ; « À propos » (version). Tout en bas, « Supprimer mon
   compte » en lien muted souligné, volontairement discret, confirmé par une alerte destructive.
+- Rejoindre (`/join/[token]`, ouvert par un lien ou un QR code d'invitation ; sans session,
+  la connexion s'affiche puis l'accueil rouvre l'invitation) : `ScreenHeader` avec retour,
+  titre « On t'invite dans un album » (ou « Tu fais déjà partie de cet album »), sous-titre
+  « Léa partage ses photos avec toi ». Carte d'aperçu comme la carte d'album (couverture
+  16:10, nom 22, période · état, avatars chevauchés 32 + « N personnes »), puis pilule rose
+  56 « Rejoindre l'album » (ou « Ouvrir l'album ») et une aide muted centrée. Lien invalide :
+  🔗, « Ce lien ne fonctionne plus », pilule « Retour à mes albums ».
 - Langue (`/language`) : titre « Langue », sous-titre « D'autres langues arrivent bientôt ».
   Liste embarquée dans l'app, affichée sans chargement (réglage lu en synchrone).
   Carte `card` arrondie 18, une rangée de 60 par langue : nom dans sa langue (16 gras) et, si

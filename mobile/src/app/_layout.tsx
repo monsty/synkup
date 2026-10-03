@@ -62,6 +62,9 @@ function RootNavigator() {
         <Stack.Screen name="settings" />
         <Stack.Screen name="language" />
         <Stack.Screen name="subscription" />
+        {/* Invitation : sans session, la connexion s'affiche ; le lien est repris ensuite
+            (voir +native-intent et l'accueil). */}
+        <Stack.Screen name="join/[token]" />
         <Stack.Screen
           name="swipe"
           options={{ presentation: 'transparentModal', animation: 'fade' }}

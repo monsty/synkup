@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import type { PhotoDto, PhotoUploadUrlsDto } from '@synkup/shared';
+
 import {
   BadRequestException,
   ConflictException,
@@ -34,7 +36,7 @@ export class PhotosService {
     albumId: string,
     userId: string,
     input: RequestUploadDto,
-  ) {
+  ): Promise<PhotoUploadUrlsDto> {
     await this.albums.memberRole(albumId, userId);
     await this.assertNotDuplicate(albumId, input.contentHash);
     await this.assertQuota(albumId);
@@ -53,7 +55,11 @@ export class PhotosService {
     return { photoId, uploads: { original, display, thumb } };
   }
 
-  async complete(albumId: string, userId: string, input: CompletePhotoDto) {
+  async complete(
+    albumId: string,
+    userId: string,
+    input: CompletePhotoDto,
+  ): Promise<PhotoDto> {
     await this.albums.memberRole(albumId, userId);
     const [storageKey, displayKey, thumbKey] = VARIANTS.map((variant) =>
       photoKey(albumId, input.photoId, variant, input.contentType),
@@ -108,7 +114,7 @@ export class PhotosService {
   }
 
   /** Photos de l'album, les plus récentes d'abord, avec des URL de lecture signées. */
-  async list(albumId: string, userId: string) {
+  async list(albumId: string, userId: string): Promise<PhotoDto[]> {
     await this.albums.memberRole(albumId, userId);
     const photos = await this.prisma.photo.findMany({
       where: { albumId },
@@ -169,7 +175,7 @@ export class PhotosService {
 
   private async toDto(
     photo: Prisma.PhotoGetPayload<{ include: { author: true } }>,
-  ) {
+  ): Promise<PhotoDto> {
     const [originalUrl, displayUrl, thumbUrl] = await Promise.all(
       [photo.storageKey, photo.displayKey, photo.thumbKey].map((k) =>
         this.storage.readUrl(k),
@@ -179,7 +185,7 @@ export class PhotosService {
       id: photo.id,
       width: photo.width,
       height: photo.height,
-      takenAt: photo.takenAt,
+      takenAt: photo.takenAt.toISOString(),
       authorId: photo.authorId,
       authorName: photo.author.nickname,
       originalUrl,

@@ -42,6 +42,11 @@ class Env {
   @IsIn(['true', 'false'])
   ALLOW_DEV_TOKENS: 'true' | 'false' = 'false';
 
+  /** Début des liens d'invitation partagés (et encodés dans les QR codes). */
+  @IsOptional()
+  @IsString()
+  INVITE_BASE_URL = 'https://synkup.app/join/';
+
   @IsString()
   @MinLength(1)
   S3_ENDPOINT!: string;

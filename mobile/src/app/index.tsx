@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { pushOnce } from '@/navigation/push-once';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -19,6 +19,7 @@ import { HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-heade
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAlbums } from '@/hooks/use-albums';
 import { useAuth } from '@/providers/auth-provider';
+import { takePendingInvite } from '@/services/pending-invite';
 import type { Album } from '@/types/album';
 
 /** « 4 albums · 2 créés par toi », « 1 album », « 2 albums créés par toi ». */
@@ -103,6 +104,12 @@ export default function AlbumsScreen() {
   // Menu en calque, sans navigation ; clé unique par ouverture (voir MenuSheet).
   const [menuKey, setMenuKey] = useState<number | null>(null);
   const [scrolled, setScrolled] = useState(false);
+
+  // Invitation ouverte avant la connexion : on y retourne dès l'arrivée sur l'accueil.
+  useEffect(() => {
+    const token = takePendingInvite();
+    if (token) pushOnce({ pathname: '/join/[token]', params: { token } });
+  }, []);
 
   const openAlbum = (album: Album) =>
     pushOnce({ pathname: '/album/[id]', params: { id: album.id } });

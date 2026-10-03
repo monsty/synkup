@@ -25,6 +25,11 @@ export const albumKeys = {
   list: () => [...albumKeys.all, 'list'] as const,
   detail: (albumId: string) => [...albumKeys.all, 'detail', albumId] as const,
   photos: (albumId: string) => [...albumKeys.all, 'photos', albumId] as const,
+  invite: (albumId: string) => [...albumKeys.all, 'invite', albumId] as const,
+};
+
+export const inviteKeys = {
+  preview: (token: string) => ['invites', token] as const,
 };
 
 /** Un album a changé : son détail prend la réponse du serveur, la liste se recharge. */
@@ -168,5 +173,40 @@ export function useDeletePhotos(albumId: string) {
   return useMutation({
     mutationFn: (photoIds: string[]) => albumApi.deletePhotos(albumId, photoIds),
     onSuccess: () => invalidatePhotos(client, albumId),
+  });
+}
+
+/** Lien d'invitation de l'album : stable tant que le propriétaire ne le remplace pas. */
+export function useAlbumInvite(albumId: string) {
+  return useQuery({
+    queryKey: albumKeys.invite(albumId),
+    queryFn: () => albumApi.getInvite(albumId),
+    staleTime: 60 * 60 * 1000,
+  });
+}
+
+export function useResetInvite(albumId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => albumApi.resetInvite(albumId),
+    onSuccess: (invite) => client.setQueryData(albumKeys.invite(albumId), invite),
+  });
+}
+
+/** Aperçu d'un lien d'invitation ; `null` s'il n'est plus valide. Toujours relu au réseau. */
+export function useInvitePreview(token: string) {
+  return useQuery({
+    queryKey: inviteKeys.preview(token),
+    queryFn: () => albumApi.previewInvite(token),
+    staleTime: 0,
+    gcTime: 0,
+  });
+}
+
+export function useAcceptInvite() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (token: string) => albumApi.acceptInvite(token),
+    onSuccess: (album) => storeAlbum(client, album),
   });
 }

@@ -1,21 +1,17 @@
 import * as Clipboard from 'expo-clipboard';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Share, StyleSheet, Text, View } from 'react-native';
 import { Pressable as SheetPressable } from 'react-native-gesture-handler';
 import QRCode from 'react-native-qrcode-svg';
 
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import type { Album } from '@/types/album';
+import { useAlbumInvite, useResetInvite } from '@/queries/albums';
+import { canEditAlbum, type Album } from '@/types/album';
 
 const QR_SIZE = 184;
 const COPIED_MS = 1800;
-
-/** Lien d'invitation : une URL web, pour que quelqu'un sans l'app puisse l'ouvrir. */
-export function getAlbumInviteUrl(album: Album): string {
-  return `https://synkup.app/join/${album.id}`;
-}
 
 type Props = {
   album: Album;
@@ -23,9 +19,14 @@ type Props = {
   onClose: () => void;
 };
 
-/** Inviter dans l'album : QR code à scanner, lien à copier, ou partage système. */
+/**
+ * Inviter dans l'album : QR code à scanner, lien à copier, ou partage système. Le lien vient
+ * de l'API (un seul lien actif par album) ; le propriétaire peut le remplacer.
+ */
 export function ShareSheet({ album, onClose }: Props) {
-  const url = getAlbumInviteUrl(album);
+  const invite = useAlbumInvite(album.id);
+  const resetInvite = useResetInvite(album.id);
+  const url = invite.data?.url ?? null;
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -37,17 +38,34 @@ export function ShareSheet({ album, onClose }: Props) {
   );
 
   const copy = async () => {
+    if (!url) return;
     await Clipboard.setStringAsync(url);
     setCopied(true);
     if (copiedTimer.current) clearTimeout(copiedTimer.current);
     copiedTimer.current = setTimeout(() => setCopied(false), COPIED_MS);
   };
 
-  const share = () =>
-    Share.share({
-      message: `Rejoins l'album « ${album.name} » sur Synkup : ${url}`,
-      url,
-    });
+  const share = () => {
+    if (!url) return;
+    Share.share({ message: `Rejoins l'album « ${album.name} » sur Synkup : ${url}`, url });
+  };
+
+  const confirmReset = () =>
+    Alert.alert(
+      'Générer un nouveau lien ?',
+      "L'ancien lien et son QR code ne fonctionneront plus. Les membres déjà dans l'album le restent.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Nouveau lien',
+          style: 'destructive',
+          onPress: () =>
+            resetInvite.mutate(undefined, {
+              onError: () => Alert.alert('Oups', 'Impossible de générer un nouveau lien.'),
+            }),
+        },
+      ]
+    );
 
   return (
     <BottomSheet dismissLabel="Fermer le partage" onClose={onClose}>
@@ -60,7 +78,17 @@ export function ShareSheet({ album, onClose }: Props) {
 
       <View style={styles.qrWrap}>
         <View style={styles.qrCard}>
-          <QRCode value={url} size={QR_SIZE} color={Palette.text} backgroundColor={Palette.card} />
+          {url && !resetInvite.isPending ? (
+            <QRCode value={url} size={QR_SIZE} color={Palette.text} backgroundColor={Palette.card} />
+          ) : (
+            <View style={styles.qrPlaceholder}>
+              {invite.isError ? (
+                <Text style={styles.qrHint}>Lien indisponible, réessaie.</Text>
+              ) : (
+                <ActivityIndicator color={Palette.pink} />
+              )}
+            </View>
+          )}
         </View>
         <Text style={styles.qrHint}>Fais scanner ce code avec l&apos;appareil photo</Text>
       </View>
@@ -74,7 +102,7 @@ export function ShareSheet({ album, onClose }: Props) {
           fallback={<Text style={styles.linkIconFallback}>⛓</Text>}
         />
         <Text style={styles.link} numberOfLines={1} ellipsizeMode="middle">
-          {url.replace(/^https?:\/\//, '')}
+          {url ? url.replace(/^https?:\/\//, '') : ' '}
         </Text>
       </View>
 
@@ -82,6 +110,7 @@ export function ShareSheet({ album, onClose }: Props) {
         <SheetPressable
           accessibilityRole="button"
           accessibilityLabel="Copier le lien"
+          disabled={!url}
           onPress={copy}
           style={({ pressed }) => [
             styles.button,
@@ -106,6 +135,7 @@ export function ShareSheet({ album, onClose }: Props) {
         <SheetPressable
           accessibilityRole="button"
           accessibilityLabel="Partager le lien"
+          disabled={!url}
           onPress={share}
           style={({ pressed }) => [styles.button, styles.buttonPrimary, pressed && styles.pressed]}>
           <SymbolView
@@ -118,6 +148,18 @@ export function ShareSheet({ album, onClose }: Props) {
           <Text style={styles.buttonLabel}>Partager</Text>
         </SheetPressable>
       </View>
+
+      {/* Remplacer le lien : réservé au propriétaire, discret, confirmé par une alerte. */}
+      {canEditAlbum(album.myRole) && (
+        <SheetPressable
+          accessibilityRole="button"
+          disabled={resetInvite.isPending}
+          onPress={confirmReset}
+          hitSlop={8}
+          style={({ pressed }) => [styles.resetLink, pressed && styles.pressed]}>
+          <Text style={styles.resetText}>Générer un nouveau lien</Text>
+        </SheetPressable>
+      )}
     </BottomSheet>
   );
 }
@@ -151,6 +193,23 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.card,
     borderWidth: 2,
     borderColor: Palette.surfaceStrong,
+  },
+  qrPlaceholder: {
+    width: QR_SIZE,
+    height: QR_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetLink: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.one,
+  },
+  resetText: {
+    color: Palette.textMuted,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   qrHint: {
     color: Palette.textMuted,

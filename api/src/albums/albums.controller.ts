@@ -19,6 +19,7 @@ import {
   UpdateMemberDto,
 } from './albums.dto.js';
 import { AlbumsService } from './albums.service.js';
+import { InvitesService } from './invites.service.js';
 import {
   CompletePhotoDto,
   CoverUploadDto,
@@ -33,6 +34,7 @@ export class AlbumsController {
   constructor(
     private readonly albums: AlbumsService,
     private readonly photos: PhotosService,
+    private readonly invites: InvitesService,
   ) {}
 
   /** GET /albums : les albums de l'utilisateur authentifié. */
@@ -129,5 +131,17 @@ export class AlbumsController {
     @Body() body: DeletePhotosDto,
   ) {
     return this.photos.remove(id, user.id, body.ids);
+  }
+
+  /** Lien d'invitation actif, créé au premier partage. Tout membre peut le partager. */
+  @Get(':id/invite')
+  invite(@User() user: CurrentUser, @Param('id') id: string) {
+    return this.invites.current(id, user.id);
+  }
+
+  /** Nouveau lien ; l'ancien cesse de fonctionner. Propriétaire seulement. */
+  @Post(':id/invite/reset')
+  resetInvite(@User() user: CurrentUser, @Param('id') id: string) {
+    return this.invites.reset(id, user.id);
   }
 }

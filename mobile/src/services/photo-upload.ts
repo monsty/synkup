@@ -5,6 +5,7 @@
  * 3. prépare l'affichage (1 600 px) et la miniature (480 px) en JPEG ;
  * 4. envoie les trois fichiers, puis confirme à l'API.
  */
+import type { CoverUploadUrlDto, PhotoDto, PhotoUploadUrlsDto } from '@synkup/shared';
 import { CryptoDigestAlgorithm, digest } from 'expo-crypto';
 import { File, UploadType } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -22,9 +23,7 @@ const THUMB_MIN = 480;
 /** Formats d'originale acceptés par l'API ; le reste est converti en JPEG. */
 const ORIGINAL_TYPES = new Set(['image/jpeg', 'image/heic', 'image/heif', 'image/png', 'image/webp']);
 
-type UploadUrls = { photoId: string; uploads: { original: string; display: string; thumb: string } };
-
-export type UploadedPhotoDto = { id: string };
+export type UploadedPhotoDto = PhotoDto;
 
 /** La photo était déjà dans l'album : rien n'a été envoyé. */
 export class DuplicatePhotoError extends Error {}
@@ -129,9 +128,9 @@ export async function uploadGalleryPhoto(
       takenAt: new Date(photo.creationTime ?? Date.now()).toISOString(),
     };
 
-    let urls: UploadUrls;
+    let urls: PhotoUploadUrlsDto;
     try {
-      urls = await apiRequest<UploadUrls>('POST', `/albums/${albumId}/photos/uploads`, meta);
+      urls = await apiRequest<PhotoUploadUrlsDto>('POST', `/albums/${albumId}/photos/uploads`, meta);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) throw new DuplicatePhotoError();
       throw error;
@@ -164,7 +163,7 @@ export async function uploadCover(albumId: string, localUri: string): Promise<st
     fit: 'long',
   });
   try {
-    const { key, uploadUrl } = await apiRequest<{ key: string; uploadUrl: string }>(
+    const { key, uploadUrl } = await apiRequest<CoverUploadUrlDto>(
       'POST',
       `/albums/${albumId}/cover`,
       { byteSize: new File(cover).size }

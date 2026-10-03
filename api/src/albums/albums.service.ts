@@ -7,6 +7,8 @@ import {
 
 import { randomUUID } from 'node:crypto';
 
+import type { AlbumDto, CoverUploadUrlDto } from '@synkup/shared';
+
 import { AlbumRole } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StorageService } from '../storage/storage.service.js';
@@ -40,7 +42,7 @@ export class AlbumsService {
    * Albums de l'utilisateur, avec membres, nombre de photos et couverture.
    * Tri : en cours, à venir, terminés, à la charge du client (il connaît « aujourd'hui »).
    */
-  async listForUser(userId: string) {
+  async listForUser(userId: string): Promise<AlbumDto[]> {
     const memberships = await this.prisma.albumMember.findMany({
       where: { userId },
       select: { albumId: true },
@@ -51,7 +53,7 @@ export class AlbumsService {
     );
   }
 
-  async getForUser(albumId: string, userId: string) {
+  async getForUser(albumId: string, userId: string): Promise<AlbumDto> {
     await this.memberRole(albumId, userId);
     const [album] = await this.load([albumId], userId);
     return album;
@@ -109,7 +111,11 @@ export class AlbumsService {
   }
 
   /** URL d'envoi d'une couverture choisie à la main ; à confirmer ensuite par `update`. */
-  async coverUpload(albumId: string, userId: string, byteSize: number) {
+  async coverUpload(
+    albumId: string,
+    userId: string,
+    byteSize: number,
+  ): Promise<CoverUploadUrlDto> {
     await this.assertOwner(albumId, userId);
     const key = `${coverPrefix(albumId)}${randomUUID()}.jpg`;
     return {
@@ -187,7 +193,7 @@ export class AlbumsService {
   }
 
   /** Albums au format de l'app, avec le nombre de photos envoyées par chaque membre. */
-  private async load(albumIds: string[], userId: string) {
+  private async load(albumIds: string[], userId: string): Promise<AlbumDto[]> {
     if (albumIds.length === 0) return [];
     const [albums, counts] = await Promise.all([
       this.prisma.album.findMany({

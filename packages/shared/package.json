@@ -1,0 +1,7 @@
+{
+  "name": "@synkup/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Contrat entre l'app et l'API : types des réponses, sans code à l'exécution.",
+  "types": "index.d.ts"
+}
