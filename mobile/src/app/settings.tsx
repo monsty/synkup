@@ -1,6 +1,6 @@
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { pushOnce } from '@/navigation/push-once';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,7 +9,7 @@ import { getLanguage } from '@/constants/languages';
 import { formatQuota, getPlan } from '@/constants/plans';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
-import { albumApi } from '@/services/album-api';
+import { useMyUsage } from '@/queries/albums';
 import { getSettingsSync, settingsApi, type Settings } from '@/services/settings-api';
 
 const APP_VERSION = '0.1.0';
@@ -20,18 +20,8 @@ export default function SettingsScreen() {
   // Réglages locaux lus en synchrone : l'écran s'affiche d'un coup. Seul l'usage du quota
   // arrive en arrière-plan et remplit sa ligne.
   const [settings, setSettings] = useState<Settings>(() => getSettingsSync());
-  const [usage, setUsage] = useState<{ photos: number; albums: number } | null>(null);
+  const usage = useMyUsage().data ?? null;
   const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    albumApi.getMyUsage().then((result) => {
-      if (active) setUsage(result);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const toggle = async (key: 'ownedAlbums' | 'memberAlbums', value: boolean) => {
     // Optimiste : l'interrupteur bouge tout de suite, le stockage suit.

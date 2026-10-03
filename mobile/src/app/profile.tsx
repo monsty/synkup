@@ -9,7 +9,7 @@ import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useProfile } from '@/hooks/use-profile';
-import { albumApi } from '@/services/album-api';
+import { useMyStats } from '@/queries/albums';
 import { pickSingleImage } from '@/services/photo-picker';
 import type { Profile, ProfileUpdate } from '@/services/profile-api';
 
@@ -21,21 +21,17 @@ const TOAST_MS = 2200;
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { profile, status, saving, save } = useProfile();
-  const [stats, setStats] = useState<{ albums: number; photosShared: number } | null>(null);
+  const stats = useMyStats().data ?? null;
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    albumApi.getMyStats().then((result) => {
-      if (active) setStats(result);
-    });
-    return () => {
-      active = false;
+  useEffect(
+    () => () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
-    };
-  }, []);
+    },
+    []
+  );
 
   const showToast = (text: string) => {
     setToast(text);

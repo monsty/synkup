@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Palette } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { QueryProvider } from '@/providers/query-provider';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
@@ -26,8 +27,10 @@ export default function RootLayout() {
       <GestureHandlerRootView style={styles.root}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AuthProvider>
-            <AnimatedSplashOverlay />
-            <RootNavigator />
+            <QueryProvider>
+              <AnimatedSplashOverlay />
+              <RootNavigator />
+            </QueryProvider>
           </AuthProvider>
         </ThemeProvider>
       </GestureHandlerRootView>

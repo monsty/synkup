@@ -1,72 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 
-import { albumApi } from '@/services/album-api';
-import type { Album, AlbumPhoto } from '@/types/album';
+import { useManualRefresh } from '@/hooks/use-manual-refresh';
+import { useAlbumPhotosQuery, useAlbumQuery } from '@/queries/albums';
 
 type Status = 'loading' | 'ready' | 'error' | 'not-found';
 
-async function fetchAlbumWithPhotos(albumId: string) {
-  const album = await albumApi.getAlbum(albumId);
-  if (!album) return null;
-  const photos = await albumApi.getPhotos(albumId);
-  return { album, photos };
-}
-
-/** Un album et ses photos, mis à jour automatiquement après un upload. */
+/** Un album et ses photos ; se met à jour après un envoi ou une modification. */
 export function useAlbum(albumId: string) {
-  const [album, setAlbum] = useState<Album | null>(null);
-  const [photos, setPhotos] = useState<AlbumPhoto[]>([]);
-  const [status, setStatus] = useState<Status>('loading');
-  const [refreshing, setRefreshing] = useState(false);
+  const albumQuery = useAlbumQuery(albumId);
+  const photosQuery = useAlbumPhotosQuery(albumId);
 
-  useEffect(() => {
-    let active = true;
-    fetchAlbumWithPhotos(albumId)
-      .then((result) => {
-        if (!active) return;
-        if (!result) {
-          setStatus('not-found');
-          return;
-        }
-        setAlbum(result.album);
-        setPhotos(result.photos);
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
+  const { refetch: refetchAlbum } = albumQuery;
+  const { refetch: refetchPhotos } = photosQuery;
+  const refetch = useCallback(
+    () => Promise.all([refetchAlbum(), refetchPhotos()]),
+    [refetchAlbum, refetchPhotos]
+  );
+  const { refreshing, refresh } = useManualRefresh(refetch);
 
-    const unsubscribe = albumApi.subscribe((changedAlbumId, nextPhotos) => {
-      if (changedAlbumId !== albumId) return;
-      setPhotos(nextPhotos);
-      // Le nom, la période ou les membres ont pu changer (écran de gestion).
-      albumApi.getAlbum(albumId).then((result) => {
-        if (active && result) setAlbum(result);
-      });
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [albumId]);
+  const album = albumQuery.data ?? null;
+  const status: Status =
+    albumQuery.isError || photosQuery.isError
+      ? 'error'
+      : albumQuery.isPending || photosQuery.isPending
+        ? 'loading'
+        : album
+          ? 'ready'
+          : 'not-found';
 
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const result = await fetchAlbumWithPhotos(albumId);
-      if (!result) {
-        setStatus('not-found');
-        return;
-      }
-      setAlbum(result.album);
-      setPhotos(result.photos);
-      setStatus('ready');
-    } catch {
-      setStatus('error');
-    } finally {
-      setRefreshing(false);
-    }
-  }, [albumId]);
-
-  return { album, photos, status, refreshing, refresh };
+  return { album, photos: photosQuery.data ?? [], status, refreshing, refresh };
 }

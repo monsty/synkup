@@ -1,51 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
-
-import { albumApi } from '@/services/album-api';
-import type { Album } from '@/types/album';
+import { useManualRefresh } from '@/hooks/use-manual-refresh';
+import { useAlbumsQuery } from '@/queries/albums';
 
 type Status = 'loading' | 'ready' | 'error';
 
-/** Liste des albums de l'utilisateur, rechargée après chaque ajout de photo. */
+/** Liste des albums de l'utilisateur ; se met à jour après chaque création, modification ou envoi. */
 export function useAlbums() {
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [status, setStatus] = useState<Status>('loading');
-  const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    albumApi
-      .getAlbums()
-      .then((result) => {
-        if (!active) return;
-        setAlbums(result);
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
-    // Un upload change la couverture et le compteur : on recharge la liste.
-    const unsubscribe = albumApi.subscribe(() => {
-      albumApi.getAlbums().then((result) => {
-        if (active) setAlbums(result);
-      });
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
-
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      setAlbums(await albumApi.getAlbums());
-      setStatus('ready');
-    } catch {
-      setStatus('error');
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  return { albums, status, refreshing, refresh };
+  const query = useAlbumsQuery();
+  const { refreshing, refresh } = useManualRefresh(query.refetch);
+  const status: Status = query.isPending ? 'loading' : query.isError ? 'error' : 'ready';
+  return { albums: query.data ?? [], status, refreshing, refresh };
 }

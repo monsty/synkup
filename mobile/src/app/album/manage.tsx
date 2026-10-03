@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -18,7 +18,7 @@ import { PageLoader } from '@/components/page-loader';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import { albumApi } from '@/services/album-api';
+import { useAlbumQuery, useDeleteAlbum, useUpdateAlbum } from '@/queries/albums';
 import { pickSingleImage } from '@/services/photo-picker';
 import { canEditAlbum, getAlbumRange, ROLE_LABEL, toDateKey, type Album } from '@/types/album';
 
@@ -30,30 +30,9 @@ function startOfDay(date: Date) {
 export default function ManageAlbumScreen() {
   const { albumId } = useLocalSearchParams<{ albumId: string }>();
   const insets = useSafeAreaInsets();
-  const [album, setAlbum] = useState<Album | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const { data: album, isPending, isError } = useAlbumQuery(albumId);
+  const status = isPending ? 'loading' : isError || !album ? 'error' : 'ready';
   const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    albumApi
-      .getAlbum(albumId)
-      .then((result) => {
-        if (!active) return;
-        if (!result) {
-          setStatus('error');
-          return;
-        }
-        setAlbum(result);
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
-    return () => {
-      active = false;
-    };
-  }, [albumId]);
 
   return (
     <View style={styles.container}>
@@ -90,8 +69,8 @@ export default function ManageAlbumScreen() {
         )}
         {album && canEditAlbum(album.myRole) && (
           <>
-            <CoverSection album={album} onUpdated={setAlbum} />
-            <InfoSection album={album} onUpdated={setAlbum} />
+            <CoverSection album={album} />
+            <InfoSection album={album} />
             <DeleteAlbumLink album={album} />
           </>
         )}
@@ -101,10 +80,11 @@ export default function ManageAlbumScreen() {
   );
 }
 
-type SectionProps = { album: Album; onUpdated: (album: Album) => void };
+type SectionProps = { album: Album };
 
 /** Nom et période, modifiables par le propriétaire. */
-function InfoSection({ album, onUpdated }: SectionProps) {
+function InfoSection({ album }: SectionProps) {
+  const update = useUpdateAlbum(album.id);
   const editable = canEditAlbum(album.myRole);
   const range = getAlbumRange(album);
   const [name, setName] = useState(album.name);
@@ -124,13 +104,11 @@ function InfoSection({ album, onUpdated }: SectionProps) {
     if (!dirty || !valid || saving) return;
     setSaving(true);
     try {
-      onUpdated(
-        await albumApi.updateAlbum(album.id, {
-          name: trimmed,
-          startDate: toDateKey(start),
-          endDate: toDateKey(end),
-        })
-      );
+      await update.mutateAsync({
+        name: trimmed,
+        startDate: toDateKey(start),
+        endDate: toDateKey(end),
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
     } finally {
@@ -192,6 +170,7 @@ function InfoSection({ album, onUpdated }: SectionProps) {
 
 /** Suppression de l'album : lien discret en bas, confirmé, puis retour à la liste. */
 function DeleteAlbumLink({ album }: { album: Album }) {
+  const deleteAlbum = useDeleteAlbum();
   const [deleting, setDeleting] = useState(false);
   const confirm = () => {
     const n = album.photoCount;
@@ -206,7 +185,7 @@ function DeleteAlbumLink({ album }: { album: Album }) {
           onPress: async () => {
             setDeleting(true);
             try {
-              await albumApi.deleteAlbum(album.id);
+              await deleteAlbum.mutateAsync(album.id);
               router.dismissAll();
             } finally {
               setDeleting(false);
@@ -233,14 +212,15 @@ function DeleteAlbumLink({ album }: { album: Album }) {
 }
 
 /** Photo de couverture : la dernière photo par défaut, ou une image choisie par le propriétaire. */
-function CoverSection({ album, onUpdated }: SectionProps) {
+function CoverSection({ album }: SectionProps) {
+  const update = useUpdateAlbum(album.id);
   const editable = canEditAlbum(album.myRole);
   const [busy, setBusy] = useState(false);
 
   const apply = async (coverUri: string | null) => {
     setBusy(true);
     try {
-      onUpdated(await albumApi.updateAlbum(album.id, { coverUri }));
+      await update.mutateAsync({ coverUri });
     } finally {
       setBusy(false);
     }

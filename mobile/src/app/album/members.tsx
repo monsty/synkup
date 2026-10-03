@@ -1,7 +1,6 @@
-import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -15,57 +14,36 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Avatar } from '@/components/avatar';
 import { PageLoader } from '@/components/page-loader';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { ShareSheet } from '@/components/share-sheet';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import { albumApi } from '@/services/album-api';
+import { useAlbumQuery, useRemoveMember, useUpdateMemberRole } from '@/queries/albums';
+import { getCurrentUserId } from '@/services/auth-api';
 import {
   assignableRoles,
   canEditAlbum,
   canRemoveMember,
   ROLE_LABEL,
-  type Album,
   type AlbumMember,
 } from '@/types/album';
-
-/** Identifiant de l'utilisateur courant dans les données de démo. */
-const ME = 'me';
 
 export default function MembersScreen() {
   const { albumId } = useLocalSearchParams<{ albumId: string }>();
   const insets = useSafeAreaInsets();
-  const [album, setAlbum] = useState<Album | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const { data: album, isPending, isError } = useAlbumQuery(albumId);
+  const status = isPending ? 'loading' : isError || !album ? 'error' : 'ready';
+  const updateRole = useUpdateMemberRole(albumId);
+  const removeMember = useRemoveMember(albumId);
   const [scrolled, setScrolled] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [shareKey, setShareKey] = useState<number | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    albumApi
-      .getAlbum(albumId)
-      .then((result) => {
-        if (!active) return;
-        if (!result) {
-          setStatus('error');
-          return;
-        }
-        setAlbum(result);
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (active) setStatus('error');
-      });
-    return () => {
-      active = false;
-    };
-  }, [albumId]);
-
-  const run = async (memberId: string, action: () => Promise<Album>) => {
+  const run = async (memberId: string, action: () => Promise<unknown>) => {
     setBusyId(memberId);
     try {
-      setAlbum(await action());
+      await action();
     } catch (e: unknown) {
       Alert.alert('Oups', e instanceof Error ? e.message : 'Une erreur est survenue.');
     } finally {
@@ -78,7 +56,7 @@ export default function MembersScreen() {
     if (!album) return;
     const roles = assignableRoles(album.myRole, member.role);
     const removable = canRemoveMember(album.myRole, member.role);
-    if (member.id === ME || (roles.length === 0 && !removable)) return;
+    if (member.id === getCurrentUserId() || (roles.length === 0 && !removable)) return;
 
     const actions: { label: string; destructive?: boolean; onPress: () => void }[] = roles.map(
       (role) => ({
@@ -94,13 +72,13 @@ export default function MembersScreen() {
                 {
                   text: 'Transférer',
                   onPress: () =>
-                    run(member.id, () => albumApi.updateMemberRole(album.id, member.id, role)),
+                    run(member.id, () => updateRole.mutateAsync({ memberId: member.id, role })),
                 },
               ]
             );
             return;
           }
-          run(member.id, () => albumApi.updateMemberRole(album.id, member.id, role));
+          run(member.id, () => updateRole.mutateAsync({ memberId: member.id, role }));
         },
       })
     );
@@ -114,7 +92,7 @@ export default function MembersScreen() {
             {
               text: 'Retirer',
               style: 'destructive',
-              onPress: () => run(member.id, () => albumApi.removeMember(album.id, member.id)),
+              onPress: () => run(member.id, () => removeMember.mutateAsync(member.id)),
             },
           ]),
       });
@@ -175,7 +153,7 @@ export default function MembersScreen() {
             <View style={styles.list}>
               {album.members.map((member, index) => {
                 const actionable =
-                  member.id !== ME &&
+                  member.id !== getCurrentUserId() &&
                   (assignableRoles(album.myRole, member.role).length > 0 ||
                     canRemoveMember(album.myRole, member.role));
                 const busy = busyId === member.id;
@@ -191,15 +169,11 @@ export default function MembersScreen() {
                       index < count - 1 && styles.rowDivider,
                       pressed && styles.rowPressed,
                     ]}>
-                    <Image
-                      source={{ uri: member.avatarUri }}
-                      cachePolicy="memory-disk"
-                      style={styles.avatar}
-                    />
+                    <Avatar uri={member.avatarUri} name={member.name} size={40} />
                     <View style={styles.rowText}>
                       <Text style={styles.name} numberOfLines={1}>
                         {member.name}
-                        {member.id === ME && <Text style={styles.you}> (toi)</Text>}
+                        {member.id === getCurrentUserId() && <Text style={styles.you}> (toi)</Text>}
                       </Text>
                       <Text style={styles.photoCount}>
                         {member.photoCount === 0
@@ -315,12 +289,6 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     backgroundColor: Palette.background,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Palette.cardBackground,
   },
   rowText: {
     flex: 1,

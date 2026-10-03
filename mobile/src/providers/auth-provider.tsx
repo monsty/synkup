@@ -3,6 +3,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 
+import { setTokenGetter } from '@/services/api-client';
 import { setCurrentUser, type AuthProvider as Provider, type User } from '@/services/auth-api';
 
 // Ferme proprement la fenêtre du navigateur au retour d'un parcours Google / Apple.
@@ -54,7 +55,9 @@ function toMessage(error: unknown): string {
  * fausse authentification d'origine, pour que les écrans n'aient pas à changer.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded, isSignedIn, signOut: clerkSignOut } = useClerkAuth();
+  const { isLoaded, isSignedIn, getToken, signOut: clerkSignOut } = useClerkAuth();
+  // Chaque appel à l'API porte le jeton de session courant, rafraîchi par Clerk.
+  setTokenGetter(getToken);
   const { user: clerkUser } = useUser();
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();

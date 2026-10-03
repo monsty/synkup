@@ -10,7 +10,8 @@ export const ROLE_LABEL: Record<AlbumRole, string> = {
 export type AlbumMember = {
   id: string;
   name: string;
-  avatarUri: string;
+  /** `null` : pas de photo de profil, on affiche l'initiale. */
+  avatarUri: string | null;
   role: AlbumRole;
   /** Photos envoyées par ce membre dans l'album. */
   photoCount: number;
@@ -129,7 +130,9 @@ export type GalleryPhoto = {
 export type ReviewDecision = 'sent' | 'skipped';
 
 /** Bornes locales inclusives d'un album : début à 00:00:00, fin à 23:59:59.999. */
-export function getAlbumRange(album: Album): { start: Date; end: Date } {
+export function getAlbumRange(
+  album: Pick<Album, 'startDate' | 'endDate'>
+): { start: Date; end: Date } {
   const [sy, sm, sd] = album.startDate.split('-').map(Number);
   const [ey, em, ed] = album.endDate.split('-').map(Number);
   return {

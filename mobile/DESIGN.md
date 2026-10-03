@@ -136,7 +136,7 @@ rose à la place de l'icône pendant l'action.
   retour à la liste des albums.
 - Membres (`/album/members`, tap sur les avatars sous la date de l'album) : titre « Membres »,
   sous-titre « N personnes dans « album » ». Carte `card` arrondie 18, une rangée par membre
-  (avatar 40, nom + « (toi) » avec dessous « N photos envoyées » en muted 13, pilule rose 28
+  (avatar 40, initiale blanche sur rose sans photo de profil, nom + « (toi) » avec dessous « N photos envoyées » en muted 13, pilule rose 28
   « Propriétaire » sur le seul propriétaire et rien sur les membres, « … » muted si des actions
   existent, sinon la pilule vient au bord droit). Deux rôles seulement. Tap par le propriétaire : feuille
   d'actions système (« Transférer la propriété », « Retirer de l'album » en destructif), chacune

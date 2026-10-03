@@ -17,7 +17,7 @@ import { PhotoViewer } from '@/components/photo-viewer';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAlbum } from '@/hooks/use-album';
-import { albumApi } from '@/services/album-api';
+import { useDeletePhotos } from '@/queries/albums';
 import { useDownloadSelection } from '@/hooks/use-download-selection';
 import { formatAlbumRange } from '@/types/album';
 
@@ -26,6 +26,7 @@ const FAB_SIZE = ADD_BUTTON_SIZE;
 export default function AlbumScreen() {
   const { id: albumId } = useLocalSearchParams<{ id: string }>();
   const { album, photos, status, refreshing, refresh } = useAlbum(albumId);
+  const deletePhotos = useDeletePhotos(albumId);
   const insets = useSafeAreaInsets();
   const download = useDownloadSelection(album, photos);
   // Visualiseur en calque, sans navigation : index de la photo ouverte ou null.
@@ -81,7 +82,7 @@ export default function AlbumScreen() {
           onPress: async () => {
             setDeleting(true);
             try {
-              await albumApi.deletePhotos(album.id, [...(manageIds ?? [])]);
+              await deletePhotos.mutateAsync([...(manageIds ?? [])]);
               setManageIds(null);
             } finally {
               setDeleting(false);

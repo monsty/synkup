@@ -16,20 +16,42 @@ npm run start:dev          # http://localhost:3000
 
 ## Authentification
 
-Chaque requête porte `Authorization: Bearer <jeton>`. En développement, tant que Clerk n'est pas
-branché, un jeton `dev:<userId>:<email>` est accepté. En production, `AuthGuard.verify` vérifie
-le JWT Clerk ; rien d'autre ne change.
+Chaque requête porte `Authorization: Bearer <jeton>`, le jeton de session Clerk envoyé par l'app.
+`AuthGuard` en vérifie la signature avec `CLERK_SECRET_KEY` (clés publiques de l'instance, mises
+en cache). À la première requête d'un compte, `UsersService` lit son email, prénom et avatar
+chez Clerk et crée la ligne `User` ; l'identifiant est celui de Clerk (`user_…`).
+
+En développement, un jeton `dev:<userId>:<email>` est aussi accepté (compte créé à la volée),
+pour tester sans l'app :
 
 ```bash
-curl -H "Authorization: Bearer dev:me:antoine@example.com" http://localhost:3000/albums
+curl -H "Authorization: Bearer dev:user_test:test@example.com" http://localhost:3000/albums
 ```
+
+Sessions : l'instance Clerk de dev garde une session 10 ans, sans expiration à l'inactivité. En
+production, une durée personnalisée demande Clerk Pro ; sinon la session est fixée à 7 jours.
+
+## Routes
+
+| Méthode  | Route                               | Rôle requis   |
+| -------- | ----------------------------------- | ------------- |
+| `GET`    | `/albums`                           | membre        |
+| `POST`   | `/albums`                           | —             |
+| `GET`    | `/albums/:id`                       | membre        |
+| `PATCH`  | `/albums/:id` (nom, période, cover) | propriétaire  |
+| `DELETE` | `/albums/:id`                       | propriétaire  |
+| `PATCH`  | `/albums/:id/members/:memberId`     | propriétaire  |
+| `DELETE` | `/albums/:id/members/:memberId`     | propriétaire  |
+
+Un album dont on n'est pas membre répond 404, pour ne rien révéler.
 
 ## Structure
 
 - `prisma/schema.prisma` : modèle de données (User, Album, AlbumMember, Photo, AlbumInvite).
 - `src/prisma` : client Prisma partagé.
-- `src/auth` : garde d'authentification et décorateur `@User()`.
-- `src/albums` : première ressource, `GET /albums`.
+- `src/auth` : garde d'authentification (jeton Clerk) et décorateur `@User()`.
+- `src/users` : création des utilisateurs à partir de Clerk.
+- `src/albums` : albums et membres.
 
 Le client Prisma est généré dans `src/generated/prisma` (ignoré par git) : `npx prisma generate`.
 

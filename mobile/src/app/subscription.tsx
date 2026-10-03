@@ -14,21 +14,19 @@ import {
   type PlanId,
 } from '@/constants/plans';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import { albumApi } from '@/services/album-api';
+import { useMyUsage } from '@/queries/albums';
 import { settingsApi } from '@/services/settings-api';
 
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const [planId, setPlanId] = useState<PlanId | null>(null);
-  const [usage, setUsage] = useState<{ photos: number; albums: number } | null>(null);
+  const usage = useMyUsage().data ?? null;
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     let active = true;
-    Promise.all([settingsApi.getSettings(), albumApi.getMyUsage()]).then(([settings, result]) => {
-      if (!active) return;
-      setPlanId(settings.plan);
-      setUsage(result);
+    settingsApi.getSettings().then((settings) => {
+      if (active) setPlanId(settings.plan);
     });
     return () => {
       active = false;

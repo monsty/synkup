@@ -1,6 +1,6 @@
-import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Avatar } from '@/components/avatar';
 import { Fonts, Palette } from '@/constants/theme';
 import type { AlbumMember } from '@/types/album';
 
@@ -20,11 +20,11 @@ export function AvatarStack({ members }: Props) {
   return (
     <View style={styles.row}>
       {visible.map((member, index) => (
-        <Image
+        <Avatar
           key={member.id}
-          source={{ uri: member.avatarUri }}
-          accessibilityLabel={member.name}
-          cachePolicy="memory-disk"
+          uri={member.avatarUri}
+          name={member.name}
+          size={SIZE}
           style={[styles.avatar, index > 0 && styles.overlap]}
         />
       ))}
@@ -48,7 +48,6 @@ const styles = StyleSheet.create({
     borderRadius: SIZE / 2,
     borderWidth: 2,
     borderColor: Palette.card,
-    backgroundColor: Palette.cardBackground,
   },
   overlap: {
     marginLeft: -OVERLAP,

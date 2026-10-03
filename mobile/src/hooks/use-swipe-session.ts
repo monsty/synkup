@@ -2,11 +2,11 @@ import { usePermissions } from 'expo-media-library';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { albumApi } from '@/services/album-api';
+import { useAlbumQuery, useUploadPhoto } from '@/queries/albums';
 import { getGalleryPhotosBetween } from '@/services/gallery';
 import { getDevicePhotos, markPhotoOnDevice } from '@/services/device-photos-store';
 import { getReviews, saveReview } from '@/services/review-store';
-import { getAlbumRange, type Album, type GalleryPhoto, type ReviewDecision } from '@/types/album';
+import { getAlbumRange, type GalleryPhoto, type ReviewDecision } from '@/types/album';
 
 export type SwipeSessionStatus =
   'loading' | 'unsupported' | 'permission-denied' | 'error' | 'ready';
@@ -16,22 +16,21 @@ export type SwipeSessionStatus =
  * de l'album jamais proposées, et enregistrement des décisions (envoi ou passe).
  */
 export function useSwipeSession(albumId: string) {
-  const [album, setAlbum] = useState<Album | null>(null);
+  const albumQuery = useAlbumQuery(albumId);
+  const album = albumQuery.data ?? null;
+  const { mutateAsync: uploadPhoto } = useUploadPhoto();
   const [permission, requestPermission] = usePermissions({ granularPermissions: ['photo'] });
   const [candidates, setCandidates] = useState<GalleryPhoto[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [galleryError, setError] = useState<string | null>(null);
+  const error =
+    galleryError ??
+    (albumQuery.isError
+      ? albumQuery.error.message
+      : albumQuery.data === null
+        ? 'Album introuvable.'
+        : null);
   const [uploadsInFlight, setUploadsInFlight] = useState(0);
   const hasAskedPermission = useRef(false);
-
-  useEffect(() => {
-    albumApi
-      .getAlbum(albumId)
-      .then((result) => {
-        if (result) setAlbum(result);
-        else setError('Album introuvable.');
-      })
-      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [albumId]);
 
   useEffect(() => {
     if (!permission || permission.granted || hasAskedPermission.current) return;
@@ -42,17 +41,22 @@ export function useSwipeSession(albumId: string) {
 
   const granted = permission?.granted ?? false;
 
+  // L'album est rechargé après chaque envoi (nouvel objet) : on ne recharge la galerie que si
+  // la période change, sinon les candidates seraient recalculées en plein tri.
+  const periodKey = album ? `${album.id}:${album.startDate}:${album.endDate}` : null;
+
   useEffect(() => {
-    if (!album || !granted) return;
+    if (!periodKey || !granted) return;
+    const [id, startDate, endDate] = periodKey.split(':');
     let cancelled = false;
 
     (async () => {
       try {
-        const { start, end } = getAlbumRange(album);
+        const { start, end } = getAlbumRange({ startDate, endDate });
         const all = await getGalleryPhotosBetween(start, end);
-        const reviews = getReviews(album.id);
+        const reviews = getReviews(id);
         // Les photos téléchargées depuis l'album sont déjà dedans : on ne les re-propose pas.
-        const fromAlbum = new Set(Object.values(getDevicePhotos(album.id)));
+        const fromAlbum = new Set(Object.values(getDevicePhotos(id)));
         if (!cancelled) {
           setCandidates(all.filter((photo) => !reviews[photo.id] && !fromAlbum.has(photo.id)));
         }
@@ -64,17 +68,20 @@ export function useSwipeSession(albumId: string) {
     return () => {
       cancelled = true;
     };
-  }, [album, granted]);
+  }, [periodKey, granted]);
 
   /** Envoie une photo de la galerie vers l'album, en arrière-plan. */
   /** Envoie une photo de la galerie vers l'album. Résout à vrai si l'envoi a réussi. */
   const uploadOne = useCallback(async (albumId: string, photo: GalleryPhoto): Promise<boolean> => {
     try {
-      const uploaded = await albumApi.uploadPhoto(albumId, {
-        localUri: photo.id,
-        width: photo.width,
-        height: photo.height,
-        takenAt: photo.creationTime,
+      const uploaded = await uploadPhoto({
+        albumId,
+        input: {
+          localUri: photo.id,
+          width: photo.width,
+          height: photo.height,
+          takenAt: photo.creationTime,
+        },
       });
       // Cette photo vient de la galerie de ce téléphone : ne jamais la retélécharger.
       markPhotoOnDevice(albumId, uploaded.id, photo.id);
@@ -83,7 +90,7 @@ export function useSwipeSession(albumId: string) {
       // POC : on ignore l'échec. À gérer (retry / file d'attente) avec la vraie API.
       return false;
     }
-  }, []);
+  }, [uploadPhoto]);
 
   /** Envoi en arrière-plan depuis le swipe : juste un spinner à côté du compteur. */
   const upload = useCallback(

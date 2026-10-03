@@ -16,7 +16,7 @@ import { DateField } from '@/components/date-field';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import { albumApi } from '@/services/album-api';
+import { useCreateAlbum } from '@/queries/albums';
 import { toDateKey } from '@/types/album';
 
 const NAME_MAX = 40;
@@ -60,6 +60,7 @@ export default function NewAlbumScreen() {
   const [start, setStart] = useState(() => startOfDay(new Date()));
   const [end, setEnd] = useState(() => startOfDay(new Date()));
   const [saving, setSaving] = useState(false);
+  const createAlbum = useCreateAlbum();
   const [error, setError] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
@@ -101,7 +102,7 @@ export default function NewAlbumScreen() {
     setSaving(true);
     setError(null);
     try {
-      const album = await albumApi.createAlbum({
+      const album = await createAlbum.mutateAsync({
         name: trimmedName,
         startDate: toDateKey(start),
         endDate: toDateKey(end),
