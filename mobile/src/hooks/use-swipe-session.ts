@@ -1,5 +1,5 @@
 import { usePermissions } from 'expo-media-library';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 import { useAlbumUploads } from '@/hooks/use-upload-queue';
@@ -83,35 +83,21 @@ export function useSwipeSession(albumId: string) {
     [album]
   );
 
-  /** Identifiants des photos de la galerie déjà envoyées dans cet album (swipe ou sélection). */
-  const sentIds = useMemo(() => {
-    if (!album) return new Set<string>();
-    const reviews = getReviews(album.id);
-    const sent = Object.entries(reviews)
-      .filter(([, decision]) => decision === 'sent')
-      .map(([id]) => id);
-    return new Set([...sent, ...Object.values(getDevicePhotos(album.id))]);
-    // Recalculé quand les candidates changent, c'est-à-dire après chaque décision.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [album, candidates]);
-
   /**
-   * Sélection manuelle : met en file les photos choisies (sauf celles déjà dans l'album) et
-   * les retire des candidates au swipe. L'envoi se poursuit en arrière-plan.
+   * Sélection manuelle : met en file toutes les photos choisies, même celles déjà envoyées
+   * depuis ce téléphone (elle sert aussi à renvoyer une photo supprimée de l'album, ou dont
+   * l'envoi s'est perdu). L'API refuse un vrai doublon, que la file compte comme envoyé. Seules
+   * les photos déjà dans la file sont ignorées. Les photos choisies quittent les candidates.
    */
   const sendMany = useCallback(
-    (photos: GalleryPhoto[]): { queued: number; skipped: number } => {
-      if (!album) return { queued: 0, skipped: photos.length };
-      const fresh = photos.filter((p) => !sentIds.has(p.id));
-      if (fresh.length === 0) return { queued: 0, skipped: photos.length };
-
-      const ids = new Set(fresh.map((p) => p.id));
+    (photos: GalleryPhoto[]): { queued: number } => {
+      if (!album) return { queued: 0 };
+      const ids = new Set(photos.map((p) => p.id));
       setCandidates((current) => current?.filter((p) => !ids.has(p.id)) ?? null);
-      for (const photo of fresh) saveReview(album.id, photo.id, 'sent');
-      enqueueUploads(album.id, fresh);
-      return { queued: fresh.length, skipped: photos.length - fresh.length };
+      for (const photo of photos) saveReview(album.id, photo.id, 'sent');
+      return { queued: enqueueUploads(album.id, photos) };
     },
-    [album, sentIds]
+    [album]
   );
 
   let status: SwipeSessionStatus = 'loading';
@@ -127,7 +113,6 @@ export function useSwipeSession(albumId: string) {
     candidates: candidates ?? [],
     decide,
     sendMany,
-    sentIds,
     /** Photos de cet album en attente ou en cours d'envoi. */
     uploadsInFlight: uploads.active,
     /** Sur Android on peut redemander ; sur iOS il faut passer par les réglages. */

@@ -20,7 +20,12 @@ function toGalleryId(asset: ImagePicker.ImagePickerAsset): string {
   return asset.assetId;
 }
 
-/** Ouvre le sélecteur natif en multi-sélection. Renvoie [] si l'utilisateur annule. */
+/**
+ * Ouvre le sélecteur natif en multi-sélection. Renvoie [] si l'utilisateur annule.
+ * Mode « fichier d'origine » : le sélecteur copie chaque fichier tel quel au lieu de le décoder
+ * et le ré-encoder en JPEG, ce qui prenait plusieurs secondes pour quelques photos. On ne se
+ * sert de toute façon que de l'identifiant : la file relit la photo dans la galerie.
+ */
 export async function pickPhotosFromGallery(): Promise<GalleryPhoto[]> {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
@@ -28,6 +33,7 @@ export async function pickPhotosFromGallery(): Promise<GalleryPhoto[]> {
     selectionLimit: 0,
     quality: 1,
     exif: false,
+    preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Current,
   });
   if (result.canceled) return [];
   return result.assets.map((asset) => ({

@@ -48,7 +48,7 @@ export default function SwipeScreen() {
 
   // Sélection manuelle dans la galerie, via le sélecteur natif du système. Les photos partent
   // dans la file d'arrière-plan : on revient aussitôt à l'album, dont le bandeau montre
-  // l'avancement. La modale ne sert qu'à dire qu'il n'y avait rien à envoyer.
+  // l'avancement. La modale ne sert qu'à dire que tout était déjà en file.
   const [picking, setPicking] = useState(false);
   const { overlay, finish } = useProgressOverlay();
   const pickFromGallery = async () => {
@@ -59,7 +59,7 @@ export default function SwipeScreen() {
       if (chosen.length === 0) return;
       const { queued } = sendMany(chosen);
       if (queued > 0) close();
-      else await finish('Déjà dans l’album');
+      else await finish('Déjà en cours d’envoi');
     } finally {
       setPicking(false);
     }

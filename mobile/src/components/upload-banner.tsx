@@ -14,11 +14,12 @@ const FILL_DURATION_MS = 260;
  * envois ont échoué, il reste avec la raison, « Réessayer » et « Ignorer ».
  */
 export function UploadBanner({ albumId }: { albumId: string }) {
-  const { active, done, failed, error } = useAlbumUploads(albumId);
-  if (active === 0 && done === 0 && failed === 0) return null;
+  const { active, done, duplicate, failed, error } = useAlbumUploads(albumId);
+  if (active === 0 && done === 0 && duplicate === 0 && failed === 0) return null;
 
-  const total = active + done;
+  const total = active + done + duplicate;
   const uploading = active > 0;
+  const plural = (n: number) => (n > 1 ? 's' : '');
 
   return (
     <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
@@ -48,14 +49,21 @@ export function UploadBanner({ albumId }: { albumId: string }) {
           <View style={styles.text}>
             <Text style={styles.title}>
               {uploading
-                ? `Envoi des photos · ${done} / ${total}`
+                ? `Envoi des photos · ${done + duplicate} / ${total}`
                 : failed > 0
-                  ? `${failed} photo${failed > 1 ? 's' : ''} n’${failed > 1 ? 'ont' : 'a'} pas pu être envoyée${failed > 1 ? 's' : ''}`
-                  : `${done} photo${done > 1 ? 's' : ''} envoyée${done > 1 ? 's' : ''}`}
+                  ? `${failed} photo${plural(failed)} n’${failed > 1 ? 'ont' : 'a'} pas pu être envoyée${plural(failed)}`
+                  : done > 0
+                    ? `${done} photo${plural(done)} envoyée${plural(done)}`
+                    : `${duplicate} photo${plural(duplicate)} déjà dans l’album`}
             </Text>
             {uploading && failed > 0 && (
               <Text style={styles.detail}>
                 {failed} en échec, à réessayer une fois l’envoi terminé
+              </Text>
+            )}
+            {!uploading && failed === 0 && done > 0 && duplicate > 0 && (
+              <Text style={styles.detail}>
+                {duplicate} déjà dans l’album, pas renvoyée{plural(duplicate)}
               </Text>
             )}
             {!uploading && failed > 0 && error && <Text style={styles.detail}>{error}</Text>}

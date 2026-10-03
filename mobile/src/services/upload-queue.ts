@@ -40,17 +40,20 @@ export type UploadItem = {
 export type AlbumUploads = {
   active: number;
   done: number;
+  /** Refusées par l'API parce que déjà dans l'album (même fichier) : rien à envoyer. */
+  duplicate: number;
   failed: number;
   /** Première raison d'échec, pour l'afficher. */
   error: string | null;
 };
 
-const IDLE: AlbumUploads = { active: 0, done: 0, failed: 0, error: null };
+const IDLE: AlbumUploads = { active: 0, done: 0, duplicate: 0, failed: 0, error: null };
 
 let userId: string | null = null;
 let items: UploadItem[] = [];
 /** Photos parties depuis la dernière visite de l'album : pour « 3 / 12 » puis « 12 envoyées ». */
 const completed = new Map<string, number>();
+const duplicates = new Map<string, number>();
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 /** Incrémenté à chaque arrêt : un envoi lancé avant n'écrit plus rien. */
 let generation = 0;
@@ -113,6 +116,7 @@ export function stopUploadQueue(): void {
   userId = null;
   items = [];
   completed.clear();
+  duplicates.clear();
   if (retryTimer) clearTimeout(retryTimer);
   retryTimer = null;
   emit();
@@ -151,7 +155,10 @@ export function dismissFailedUploads(albumId: string): void {
   if (failed.length === 0) return;
   for (const item of failed) removeReview(albumId, item.photo.id);
   items = items.filter((item) => !failed.includes(item));
-  if (!hasWork(albumId)) completed.delete(albumId);
+  if (!hasWork(albumId)) {
+    completed.delete(albumId);
+    duplicates.delete(albumId);
+  }
   changed();
 }
 
@@ -160,8 +167,9 @@ export function dismissFailedUploads(albumId: string): void {
  * envoi, pour que « 3 / 12 » reste juste si on revient avant la fin.
  */
 export function acknowledgeUploads(albumId: string): void {
-  if (hasWork(albumId) || !completed.has(albumId)) return;
+  if (hasWork(albumId) || (!completed.has(albumId) && !duplicates.has(albumId))) return;
   completed.delete(albumId);
+  duplicates.delete(albumId);
   emit();
 }
 
@@ -170,6 +178,7 @@ export function removeAlbumUploads(albumId: string): void {
   if (!items.some((item) => item.albumId === albumId)) return;
   items = items.filter((item) => item.albumId !== albumId);
   completed.delete(albumId);
+  duplicates.delete(albumId);
   changed();
 }
 
@@ -203,7 +212,11 @@ export function getAlbumUploads(albumId: string): AlbumUploads {
     } else active += 1;
   }
   const done = completed.get(albumId) ?? 0;
-  const stats = active === 0 && failed === 0 && done === 0 ? IDLE : { active, done, failed, error };
+  const duplicate = duplicates.get(albumId) ?? 0;
+  const stats =
+    active === 0 && failed === 0 && done === 0 && duplicate === 0
+      ? IDLE
+      : { active, done, duplicate, failed, error };
   snapshots.set(albumId, { version, stats });
   return stats;
 }
@@ -250,15 +263,16 @@ async function run(item: UploadItem, gen: number) {
   } catch (error) {
     if (gen !== generation) return;
     // Déjà dans l'album (envoyée par quelqu'un d'autre, ou depuis un autre téléphone).
-    if (error instanceof DuplicatePhotoError) return finish(item);
+    if (error instanceof DuplicatePhotoError) return finish(item, true);
     fail(item, error);
   }
 }
 
-function finish(item: UploadItem) {
+function finish(item: UploadItem, duplicate = false) {
   items = items.filter((other) => other !== item);
-  completed.set(item.albumId, (completed.get(item.albumId) ?? 0) + 1);
-  uploadedListeners.forEach((listener) => listener(item.albumId));
+  const counter = duplicate ? duplicates : completed;
+  counter.set(item.albumId, (counter.get(item.albumId) ?? 0) + 1);
+  if (!duplicate) uploadedListeners.forEach((listener) => listener(item.albumId));
   changed();
 }
 

@@ -242,8 +242,9 @@ rose à la place de l'icône pendant l'action.
   rose (`photo.on.rectangle.angled` / `photo_library`) ouvre le sélecteur natif du système
   (`expo-image-picker`, PHPicker / Photo Picker, multi-sélection sans limite) pour choisir des
   photos hors du flux de swipe ; les photos choisies partent dans la file d'envoi (voir plus
-  bas), sont retirées des candidates, et celles déjà dans l'album sont ignorées ; la
-  `ProgressModal` ne sert qu'à dire « Déjà dans l'album » ; si des photos partent, l'écran de
+  bas) et sont retirées des candidates, même celles déjà envoyées depuis ce téléphone (pour
+  renvoyer une photo supprimée de l'album ; l'API refuse les vrais doublons) ; la
+  `ProgressModal` ne sert qu'à dire « Déjà en cours d'envoi » ; si des photos partent, l'écran de
   tri se ferme aussitôt pour revenir à l'album suivre l'envoi (y compris depuis l'état « Tout
   est trié »).
 - Paquet de swipe : deux cartes visibles (dessus, derrière réduite à 0,92 et décalée de 18) et
@@ -255,7 +256,8 @@ rose à la place de l'icône pendant l'action.
   « N à trier » tant que des envois de l'album sont en cours. Dans l'album, sous le bloc titre,
   bandeau `UploadBanner` (carte `card` 18, rond gris 36 avec spinner, texte 14 gras
   `tabular-nums`) : « Envoi des photos · 3 / 12 » avec barre rose 6, puis « 12 photos envoyées »
-  avec coche, affiché tant qu'on n'est pas revenu à la liste des albums ; si des envois ont échoué, rond `text` avec « ! », « 2 photos n'ont pas pu
+  avec coche, affiché tant qu'on n'est pas revenu à la liste des albums (les doublons refusés par
+  l'API comptent à part : « 2 déjà dans l'album, pas renvoyées ») ; si des envois ont échoué, rond `text` avec « ! », « 2 photos n'ont pas pu
   être envoyées », la raison en muted 13, et deux actions texte à droite : « Ignorer » muted
   (les photos reviennent au tri) et « Réessayer » rose.
   Modale transparente en fondu, `BlurView` clair (intensité 70) + voile blanc
