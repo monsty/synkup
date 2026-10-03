@@ -96,7 +96,7 @@ export class AlbumsService {
       current.coverKey &&
       current.coverKey !== input.coverKey
     ) {
-      await this.storage.delete([current.coverKey]);
+      await this.storage.deleteQuietly([current.coverKey]);
     }
     return this.getForUser(albumId, userId);
   }
@@ -105,14 +105,17 @@ export class AlbumsService {
   async remove(albumId: string, userId: string) {
     await this.assertOwner(albumId, userId);
     await this.prisma.album.delete({ where: { id: albumId } });
-    await this.storage.deletePrefix(albumPrefix(albumId));
+    await this.storage.deletePrefixQuietly(albumPrefix(albumId));
   }
 
   /** URL d'envoi d'une couverture choisie à la main ; à confirmer ensuite par `update`. */
-  async coverUpload(albumId: string, userId: string) {
+  async coverUpload(albumId: string, userId: string, byteSize: number) {
     await this.assertOwner(albumId, userId);
     const key = `${coverPrefix(albumId)}${randomUUID()}.jpg`;
-    return { key, uploadUrl: await this.storage.uploadUrl(key, 'image/jpeg') };
+    return {
+      key,
+      uploadUrl: await this.storage.uploadUrl(key, 'image/jpeg', byteSize),
+    };
   }
 
   private async assertCoverUploaded(albumId: string, key: string) {

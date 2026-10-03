@@ -9,10 +9,11 @@ import {
   IsString,
   IsUUID,
   Matches,
+  Max,
   Min,
 } from 'class-validator';
 
-import { ORIGINAL_EXTENSIONS } from './media-keys.js';
+import { MAX_BYTES, ORIGINAL_EXTENSIONS } from './media-keys.js';
 
 /** Ce que le téléphone sait d'une photo avant de l'envoyer. */
 export class RequestUploadDto {
@@ -35,6 +36,25 @@ export class RequestUploadDto {
 
   @IsISO8601()
   takenAt!: string;
+
+  /** Tailles exactes des trois versions, en octets : signées dans les URL d'envoi. */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_BYTES.original, { message: 'Photo trop lourde (50 Mo maximum).' })
+  byteSize!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_BYTES.display)
+  displaySize!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_BYTES.thumb)
+  thumbSize!: number;
 }
 
 /** Confirmation après l'envoi des trois versions. */
@@ -49,4 +69,13 @@ export class DeletePhotosDto {
   @ArrayMaxSize(500)
   @IsString({ each: true })
   ids!: string[];
+}
+
+/** Couverture choisie à la main : sa taille est signée dans l'URL d'envoi. */
+export class CoverUploadDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_BYTES.cover, { message: 'Image trop lourde (5 Mo maximum).' })
+  byteSize!: number;
 }

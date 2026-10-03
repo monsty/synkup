@@ -24,4 +24,15 @@ export function photoKey(
   return `${albumPrefix(albumId)}photos/${photoId}/${variant}.${ext}`;
 }
 
+/**
+ * Tailles maximales acceptées, en octets. Intégrées à la signature des URL d'envoi : le
+ * stockage refuse lui-même un fichier qui ne fait pas la taille annoncée.
+ */
+export const MAX_BYTES = {
+  original: 50 * 1024 * 1024,
+  display: 5 * 1024 * 1024,
+  thumb: 1024 * 1024,
+  cover: 5 * 1024 * 1024,
+} as const;
+
 export const coverPrefix = (albumId: string) => `${albumPrefix(albumId)}cover/`;

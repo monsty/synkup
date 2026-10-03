@@ -17,27 +17,31 @@ import type { CurrentUser } from './current-user.js';
  * sur la requête. La signature est contrôlée avec les clés publiques de l'instance, récupérées
  * puis mises en cache par `@clerk/backend`.
  *
- * En développement, un jeton `dev:<userId>:<email>` est aussi accepté, pour tester à la main
- * avec curl sans passer par l'app.
+ * Avec `ALLOW_DEV_TOKENS=true` (tests, curl ; interdit en production), un jeton
+ * `dev:<userId>:<email>` est aussi accepté.
  */
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly logger = new Logger(AuthGuard.name);
   private readonly secretKey: string;
-  private readonly isDev: boolean;
+  private readonly allowDevTokens: boolean;
 
   constructor(
     config: ConfigService,
     private readonly users: UsersService,
   ) {
     this.secretKey = config.getOrThrow<string>('CLERK_SECRET_KEY');
-    this.isDev = config.get<string>('NODE_ENV', 'development') !== 'production';
+    // Interrupteur explicite, vérifié au démarrage (jamais en production) : oublier NODE_ENV
+    // ne doit pas suffire à ouvrir l'API aux faux jetons.
+    this.allowDevTokens = config.get<string>('ALLOW_DEV_TOKENS') === 'true';
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
     const header = request.headers.authorization ?? '';
-    const token = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+    const token = header.startsWith('Bearer ')
+      ? header.slice('Bearer '.length)
+      : null;
     if (!token) {
       this.logger.warn(`${request.method} ${request.path} : jeton manquant`);
       throw new UnauthorizedException('Jeton manquant.');
@@ -48,7 +52,7 @@ export class AuthGuard implements CanActivate {
   }
 
   private async verify(token: string): Promise<CurrentUser> {
-    if (this.isDev && token.startsWith('dev:')) {
+    if (this.allowDevTokens && token.startsWith('dev:')) {
       const [, id, email] = token.split(':');
       if (id && email) return this.users.ensureDev(id, email);
     }
@@ -57,12 +61,16 @@ export class AuthGuard implements CanActivate {
     // `{ data, errors }`, mais c'est celui de la fonction interne).
     let sub: string | undefined;
     try {
-      const payload = (await verifyToken(token, { secretKey: this.secretKey })) as unknown as {
+      const payload = (await verifyToken(token, {
+        secretKey: this.secretKey,
+      })) as unknown as {
         sub?: string;
       };
       sub = payload.sub;
     } catch (error) {
-      this.logger.warn(`Jeton refusé : ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(
+        `Jeton refusé : ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
     if (!sub) throw new UnauthorizedException('Jeton invalide.');
     return this.users.ensure(sub);

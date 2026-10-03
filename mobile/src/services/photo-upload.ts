@@ -122,6 +122,10 @@ export async function uploadGalleryPhoto(
       contentType,
       width: source.width,
       height: source.height,
+      // Tailles exactes, signées dans les URL d'envoi : le stockage refuse tout autre fichier.
+      byteSize: original.size,
+      displaySize: new File(display).size,
+      thumbSize: new File(thumb).size,
       takenAt: new Date(photo.creationTime ?? Date.now()).toISOString(),
     };
 
@@ -162,7 +166,8 @@ export async function uploadCover(albumId: string, localUri: string): Promise<st
   try {
     const { key, uploadUrl } = await apiRequest<{ key: string; uploadUrl: string }>(
       'POST',
-      `/albums/${albumId}/cover`
+      `/albums/${albumId}/cover`,
+      { byteSize: new File(cover).size }
     );
     await put(cover, uploadUrl, 'image/jpeg');
     return key;

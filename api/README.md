@@ -11,8 +11,28 @@ cp .env.example .env       # pointe déjà sur la base Docker locale
 docker compose up -d       # Postgres 18 sur localhost:5432
 npx prisma migrate deploy  # applique les migrations
 npx prisma generate        # génère le client dans src/generated
-npm run start:dev          # http://localhost:3000
+npm run start:dev          # http://localhost:3000/v1, sonde : /health
 ```
+
+La configuration est vérifiée au démarrage (`src/config/env.ts`) : une variable manquante
+empêche le serveur de démarrer et est nommée dans l'erreur.
+
+## Tests
+
+```bash
+npm test                   # tests unitaires (src/**/*.spec.ts)
+npm run test:e2e           # API complète sur la base synkup_test, stockage en mémoire
+```
+
+Base de test, à créer une fois :
+
+```bash
+docker exec synkup-postgres psql -U synkup -c "create database synkup_test;"
+DATABASE_URL="postgresql://synkup:synkup@localhost:5432/synkup_test?schema=public" npx prisma migrate deploy
+```
+
+Les tests de bout en bout couvrent les règles d'accès (qui voit, modifie, supprime quoi),
+l'envoi des photos (doublons, tailles, quota) et la suppression des fichiers.
 
 ## Authentification
 
@@ -21,17 +41,20 @@ Chaque requête porte `Authorization: Bearer <jeton>`, le jeton de session Clerk
 en cache). À la première requête d'un compte, `UsersService` lit son email, prénom et avatar
 chez Clerk et crée la ligne `User` ; l'identifiant est celui de Clerk (`user_…`).
 
-En développement, un jeton `dev:<userId>:<email>` est aussi accepté (compte créé à la volée),
-pour tester sans l'app :
+Avec `ALLOW_DEV_TOKENS=true` (jamais en production : le serveur refuse de démarrer), un jeton
+`dev:<userId>:<email>` est aussi accepté, compte créé à la volée, pour tester sans l'app :
 
 ```bash
-curl -H "Authorization: Bearer dev:user_test:test@example.com" http://localhost:3000/albums
+curl -H "Authorization: Bearer dev:user_test:test@example.com" http://localhost:3000/v1/albums
 ```
 
 Sessions : l'instance Clerk de dev garde une session 10 ans, sans expiration à l'inactivité. En
 production, une durée personnalisée demande Clerk Pro ; sinon la session est fixée à 7 jours.
 
 ## Routes
+
+Toutes les routes sont préfixées par `/v1` (sauf `/health`) : une app publiée garde son
+ancienne version des mois, un changement incompatible passera par `/v2`.
 
 | Méthode  | Route                               | Rôle requis   |
 | -------- | ----------------------------------- | ------------- |
@@ -53,7 +76,8 @@ Un album dont on n'est pas membre répond 404, pour ne rien révéler.
 ## Photos
 
 Les octets ne passent jamais par l'API. Le téléphone prépare trois versions (originale,
-affichage 1 600 px et miniature 480 px en JPEG), demande des URL d'envoi signées
+affichage 1 600 px et miniature 480 px en JPEG), annonce leurs tailles (50 Mo, 5 Mo et 1 Mo
+au plus, signées dans les URL : le stockage refuse un autre fichier), demande des URL d'envoi signées
 (`POST …/photos/uploads`, qui refuse tout de suite un doublon ou un album plein), envoie les
 fichiers au bucket, puis confirme (`POST …/photos`) : l'API vérifie que les trois objets
 existent et crée la photo. Rangement : `albums/<albumId>/photos/<photoId>/{original,display,thumb}`.

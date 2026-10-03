@@ -21,6 +21,7 @@ import {
 import { AlbumsService } from './albums.service.js';
 import {
   CompletePhotoDto,
+  CoverUploadDto,
   DeletePhotosDto,
   RequestUploadDto,
 } from './photos.dto.js';
@@ -87,8 +88,12 @@ export class AlbumsController {
 
   /** URL d'envoi d'une couverture choisie à la main ; puis `PATCH /albums/:id` avec la clé. */
   @Post(':id/cover')
-  coverUpload(@User() user: CurrentUser, @Param('id') id: string) {
-    return this.albums.coverUpload(id, user.id);
+  coverUpload(
+    @User() user: CurrentUser,
+    @Param('id') id: string,
+    @Body() body: CoverUploadDto,
+  ) {
+    return this.albums.coverUpload(id, user.id, body.byteSize);
   }
 
   @Get(':id/photos')

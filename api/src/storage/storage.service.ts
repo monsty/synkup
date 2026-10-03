@@ -7,7 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /** Durée de validité d'une URL d'envoi : le temps de préparer et d'envoyer une photo. */
@@ -26,6 +26,7 @@ const READ_TTL_S = 48 * 60 * 60;
  */
 @Injectable()
 export class StorageService {
+  private readonly logger = new Logger(StorageService.name);
   private readonly s3: S3Client;
   private readonly bucket: string;
 
@@ -42,14 +43,22 @@ export class StorageService {
     });
   }
 
-  /** URL d'envoi direct depuis le téléphone ; le type MIME est figé dans la signature. */
-  uploadUrl(key: string, contentType: string): Promise<string> {
+  /**
+   * URL d'envoi direct depuis le téléphone. Type MIME et taille exacte sont figés dans la
+   * signature : le stockage refuse un fichier différent de ce qui a été annoncé.
+   */
+  uploadUrl(
+    key: string,
+    contentType: string,
+    byteSize: number,
+  ): Promise<string> {
     return getSignedUrl(
       this.s3,
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
         ContentType: contentType,
+        ContentLength: byteSize,
       }),
       { expiresIn: UPLOAD_TTL_S },
     );
@@ -109,5 +118,28 @@ export class StorageService {
       if (keys.length > 0) await this.delete(keys);
       token = page.IsTruncated ? page.NextContinuationToken : undefined;
     } while (token);
+  }
+
+  /**
+   * Après une suppression en base : la base fait foi, un échec du stockage ne doit pas faire
+   * échouer la requête. Les fichiers restés orphelins sont signalés dans les logs (et seront
+   * repris par le ménage périodique).
+   */
+  async deleteQuietly(keys: string[]): Promise<void> {
+    try {
+      await this.delete(keys);
+    } catch (error) {
+      this.logger.error(
+        `Fichiers orphelins (${keys.length}) : ${keys.join(', ')} — ${String(error)}`,
+      );
+    }
+  }
+
+  async deletePrefixQuietly(prefix: string): Promise<void> {
+    try {
+      await this.deletePrefix(prefix);
+    } catch (error) {
+      this.logger.error(`Dossier orphelin : ${prefix} — ${String(error)}`);
+    }
   }
 }

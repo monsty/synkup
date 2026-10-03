@@ -3,6 +3,7 @@
  *
  * Adresse : `EXPO_PUBLIC_API_URL` si défini, sinon la machine qui sert Metro, port 3000. En
  * développement, le téléphone (ou le simulateur) joint ainsi l'API lancée sur le Mac.
+ * Les routes sont versionnées : cette version de l'app parle à `/v1`.
  */
 import Constants from 'expo-constants';
 
@@ -13,7 +14,7 @@ function resolveBaseUrl(): string {
   return `http://${host}:3000`;
 }
 
-const BASE_URL = resolveBaseUrl();
+const BASE_URL = `${resolveBaseUrl()}/v1`;
 
 type TokenGetter = () => Promise<string | null>;
 let getToken: TokenGetter = async () => null;

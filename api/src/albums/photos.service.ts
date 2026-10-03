@@ -40,11 +40,13 @@ export class PhotosService {
     await this.assertQuota(albumId);
 
     const photoId = randomUUID();
+    const sizes = declaredSizes(input);
     const [original, display, thumb] = await Promise.all(
-      VARIANTS.map((variant) =>
+      VARIANTS.map((variant, i) =>
         this.storage.uploadUrl(
           photoKey(albumId, photoId, variant, input.contentType),
           variant === 'original' ? input.contentType : 'image/jpeg',
+          sizes[i],
         ),
       ),
     );
@@ -62,6 +64,14 @@ export class PhotosService {
     if (sizes.some((size) => size === null)) {
       throw new BadRequestException(
         'Envoi incomplet : une version de la photo manque.',
+      );
+    }
+    // Le stockage applique déjà la taille signée ; on revérifie avant d'inscrire la photo.
+    const expected = declaredSizes(input);
+    if (sizes.some((size, i) => size !== expected[i])) {
+      await this.storage.deleteQuietly([storageKey, displayKey, thumbKey]);
+      throw new BadRequestException(
+        "Envoi incomplet : la taille d'un fichier ne correspond pas.",
       );
     }
 
@@ -90,7 +100,7 @@ export class PhotosService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        await this.storage.delete([storageKey, displayKey, thumbKey]);
+        await this.storage.deleteQuietly([storageKey, displayKey, thumbKey]);
         throw duplicate();
       }
       throw error;
@@ -122,7 +132,7 @@ export class PhotosService {
     await this.prisma.photo.deleteMany({
       where: { id: { in: photos.map((p) => p.id) } },
     });
-    await this.storage.delete(
+    await this.storage.deleteQuietly(
       photos.flatMap((p) => [p.storageKey, p.displayKey, p.thumbKey]),
     );
   }
@@ -177,6 +187,11 @@ export class PhotosService {
       thumbUrl,
     };
   }
+}
+
+/** Tailles annoncées, dans l'ordre de `VARIANTS`. */
+function declaredSizes(input: RequestUploadDto): number[] {
+  return [input.byteSize, input.displaySize, input.thumbSize];
 }
 
 function duplicate() {

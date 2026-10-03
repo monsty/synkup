@@ -19,7 +19,9 @@ export class UsersService {
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
-    this.clerk = createClerkClient({ secretKey: config.getOrThrow<string>('CLERK_SECRET_KEY') });
+    this.clerk = createClerkClient({
+      secretKey: config.getOrThrow<string>('CLERK_SECRET_KEY'),
+    });
   }
 
   /** Renvoie l'utilisateur, en le créant à partir de Clerk s'il n'existe pas encore. */
@@ -27,11 +29,15 @@ export class UsersService {
     const cached = this.known.get(id);
     if (cached) return cached;
 
-    const existing = await this.prisma.user.findUnique({ where: { id }, select: { id: true, email: true } });
+    const existing = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true },
+    });
     if (existing) return this.remember(existing);
 
     const profile = await this.clerk.users.getUser(id);
-    const email = (profile.primaryEmailAddress ?? profile.emailAddresses[0])?.emailAddress;
+    const email = (profile.primaryEmailAddress ?? profile.emailAddresses[0])
+      ?.emailAddress;
     if (!email) throw new Error(`Compte Clerk ${id} sans adresse email.`);
 
     const user = await this.prisma.user.upsert({

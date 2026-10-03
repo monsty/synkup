@@ -1,13 +1,14 @@
-import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module.js';
+import { configureApp } from './setup.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  // Les DTO sont validés et nettoyés : un champ inconnu est rejeté, pas ignoré.
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-  app.enableCors();
-  await app.listen(process.env.PORT ?? 3000);
+  const app = configureApp(await NestFactory.create(AppModule));
+  // Clients natifs uniquement pour l'instant : aucun navigateur n'appelle l'API.
+  app.enableCors({ origin: false });
+  app.enableShutdownHooks();
+  await app.listen(app.get(ConfigService).get<number>('PORT', 3000));
 }
 await bootstrap();
