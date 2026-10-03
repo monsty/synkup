@@ -32,6 +32,8 @@ type Props = {
   selectable?: boolean;
   selectedIds?: Set<string>;
   onToggle?: (photo: AlbumPhoto) => void;
+  /** Tap long sur une tuile hors sélection (entrée en mode gestion). */
+  onLongPressPhoto?: (photo: AlbumPhoto) => void;
   ListHeaderComponent?: React.ReactElement;
   ListEmptyComponent?: React.ReactElement;
 };
@@ -47,6 +49,7 @@ export function PhotoGrid({
   selectable = false,
   selectedIds,
   onToggle,
+  onLongPressPhoto,
   ListHeaderComponent,
   ListEmptyComponent,
 }: Props) {
@@ -81,6 +84,12 @@ export function PhotoGrid({
             accessibilityLabel={selectable ? 'Sélectionner la photo' : 'Afficher la photo en grand'}
             accessibilityState={selectable ? { selected } : undefined}
             onPress={() => (selectable ? onToggle?.(item) : onPressPhoto(item))}
+            // Toujours définie : si elle disparaissait pendant le geste (passage en sélection),
+            // le relâché ne serait plus vu comme un appui long et onPress décocherait la tuile.
+            onLongPress={() => {
+              if (!selectable) onLongPressPhoto?.(item);
+            }}
+            delayLongPress={350}
             style={({ pressed }) => [
               styles.tile,
               { width: tileSize, height: tileSize },

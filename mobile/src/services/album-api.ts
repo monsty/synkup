@@ -234,6 +234,17 @@ export const albumApi = {
     return { albums: ALBUM_SEEDS.length, photosShared };
   },
 
+  /** Supprime des photos de l'album. POC : sans contrôle d'auteur. */
+  async deletePhotos(albumId: string, photoIds: string[]): Promise<void> {
+    await delay(NETWORK_DELAY_MS);
+    const ids = new Set(photoIds);
+    photosByAlbum.set(
+      albumId,
+      (photosByAlbum.get(albumId) ?? []).filter((p) => !ids.has(p.id))
+    );
+    notify(albumId);
+  },
+
   /** Notifie quand les photos d'un album changent (après un upload par exemple). */
   subscribe(listener: Listener): () => void {
     listeners.add(listener);

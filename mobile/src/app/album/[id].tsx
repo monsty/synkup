@@ -1,7 +1,8 @@
 import { SymbolView } from 'expo-symbols';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,6 +14,7 @@ import { PhotoViewer } from '@/components/photo-viewer';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAlbum } from '@/hooks/use-album';
+import { albumApi } from '@/services/album-api';
 import { useDownloadSelection } from '@/hooks/use-download-selection';
 import { formatAlbumRange } from '@/types/album';
 
@@ -32,6 +34,51 @@ export default function AlbumScreen() {
   const openViewer = (index: number) => setViewer((v) => ({ index, key: (v?.key ?? 0) + 1 }));
   const selecting = download.mode === 'selecting';
   const busy = download.mode === 'running';
+
+  // Mode gestion (tap long) : sélection de photos à supprimer de l'album.
+  const [manageIds, setManageIds] = useState<Set<string> | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const managing = manageIds !== null;
+  const manageCount = manageIds?.size ?? 0;
+
+  const startManaging = (photoId: string) => {
+    if (selecting || busy) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setManageIds(new Set([photoId]));
+  };
+  const toggleManaged = (photoId: string) =>
+    setManageIds((current) => {
+      const next = new Set(current);
+      if (next.has(photoId)) next.delete(photoId);
+      else next.add(photoId);
+      return next;
+    });
+  const stopManaging = () => setManageIds(null);
+
+  const confirmDelete = () => {
+    if (!album || manageCount === 0 || deleting) return;
+    const plural = manageCount > 1 ? 's' : '';
+    Alert.alert(
+      `Supprimer ${manageCount} photo${plural} ?`,
+      `Elle${plural} disparaîtr${manageCount > 1 ? 'ont' : 'a'} de l'album pour tout le monde.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await albumApi.deletePhotos(album.id, [...(manageIds ?? [])]);
+              setManageIds(null);
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
   const selectedCount = download.selectedIds.size;
 
   const downloadButton = (
@@ -40,7 +87,7 @@ export default function AlbumScreen() {
         selecting ? 'Annuler la sélection' : 'Enregistrer des photos sur le téléphone'
       }
       accessibilityRole="button"
-      disabled={status !== 'ready' || busy}
+      disabled={status !== 'ready' || busy || managing}
       onPress={selecting ? download.cancel : download.start}
       hitSlop={8}
       style={({ pressed }) => [styles.downloadButton, pressed && styles.pressed]}>
@@ -164,9 +211,10 @@ export default function AlbumScreen() {
         topInset={Spacing.one}
         bottomInset={insets.bottom + FAB_SIZE + Spacing.five}
         onPressPhoto={(photo) => openViewer(photos.findIndex((p) => p.id === photo.id))}
-        selectable={selecting}
-        selectedIds={download.selectedIds}
-        onToggle={(photo) => download.toggle(photo.id)}
+        selectable={selecting || managing}
+        selectedIds={managing ? manageIds : download.selectedIds}
+        onToggle={(photo) => (managing ? toggleManaged(photo.id) : download.toggle(photo.id))}
+        onLongPressPhoto={(photo) => startManaging(photo.id)}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
       />
@@ -197,8 +245,56 @@ export default function AlbumScreen() {
         </View>
       )}
 
-      {/* Masqué tant que la zone du bas est occupée par l'action de téléchargement. */}
-      {!downloadPill && (
+      {managing && (
+        <View
+          style={[
+            styles.bottomAction,
+            styles.bottomActionSpread,
+            { bottom: insets.bottom + Spacing.four },
+          ]}>
+          <Pressable
+            accessibilityLabel="Quitter la sélection"
+            accessibilityRole="button"
+            onPress={stopManaging}
+            style={({ pressed }) => [styles.exitButton, pressed && styles.pressed]}>
+            <SymbolView
+              name={{ ios: 'arrow.uturn.backward', android: 'undo', web: 'undo' }}
+              size={26}
+              weight="heavy"
+              tintColor={Palette.pink}
+              fallback={<Text style={styles.backFallback}>↩</Text>}
+            />
+          </Pressable>
+          <Pressable
+            accessibilityLabel={
+              manageCount > 0
+                ? `Supprimer ${manageCount} photo${manageCount > 1 ? 's' : ''}`
+                : 'Aucune photo sélectionnée'
+            }
+            accessibilityRole="button"
+            disabled={deleting}
+            onPress={confirmDelete}
+            style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}>
+            {deleting ? (
+              <ActivityIndicator size="small" color={Palette.onPhoto} />
+            ) : (
+              <SymbolView
+                name={{ ios: 'trash', android: 'delete', web: 'delete' }}
+                size={26}
+                weight="bold"
+                tintColor={Palette.onPhoto}
+                fallback={<Text style={styles.deleteFallback}>🗑</Text>}
+              />
+            )}
+            <View style={[styles.badge, styles.badgeDelete]}>
+              <Text style={[styles.badgeText, styles.badgeDeleteText]}>{manageCount}</Text>
+            </View>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Masqué tant que la zone du bas est occupée par une sélection. */}
+      {!downloadPill && !managing && (
         <AddButton
           accessibilityLabel="Trier mes photos de la période"
           onPress={() => router.push({ pathname: '/swipe', params: { albumId } })}
@@ -315,6 +411,29 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   /** Pastille du nombre de photos cochées, à cheval sur le bord haut-droit du bouton. */
+  /** Suppression : rond sombre avec corbeille blanche, pastille rose. */
+  deleteButton: {
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
+    backgroundColor: Palette.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
+  },
+  deleteFallback: {
+    fontSize: 24,
+  },
+  badgeDelete: {
+    backgroundColor: Palette.pink,
+  },
+  badgeDeleteText: {
+    color: Palette.onPhoto,
+  },
   badge: {
     position: 'absolute',
     top: -4,
