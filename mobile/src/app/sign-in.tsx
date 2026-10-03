@@ -265,7 +265,7 @@ export default function SignInScreen() {
               returnKeyType="done"
               onSubmitEditing={() => codeValid && verify()}
               error={error}
-              hint="Pour la démo, n'importe quel code à 6 chiffres fonctionne."
+              hint="Le code est valable 10 minutes."
             />
             <Pressable
               accessibilityRole="button"
