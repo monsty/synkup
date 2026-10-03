@@ -5,13 +5,16 @@ import { AssetField, MediaType, Query } from 'expo-media-library';
 
 import type { GalleryPhoto } from '@/types/album';
 
-/** Photos (pas de vidéos) prises entre `start` et `end` inclus, les plus récentes d'abord. */
+/**
+ * Photos (pas de vidéos) prises entre `start` et `end` inclus, dans l'ordre chronologique :
+ * le tri déroule l'album comme on l'a vécu, du début à la fin.
+ */
 export async function getGalleryPhotosBetween(start: Date, end: Date): Promise<GalleryPhoto[]> {
   const metadata = await new Query()
     .eq(AssetField.MEDIA_TYPE, MediaType.IMAGE)
     .gte(AssetField.CREATION_TIME, start.getTime())
     .lte(AssetField.CREATION_TIME, end.getTime())
-    .orderBy({ key: AssetField.CREATION_TIME, ascending: false })
+    .orderBy({ key: AssetField.CREATION_TIME, ascending: true })
     .exeForMetadata();
 
   return metadata.map((asset) => ({
