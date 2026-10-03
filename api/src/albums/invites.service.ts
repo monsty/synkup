@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { AlbumRole, type AlbumInvite } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StorageService } from '../storage/storage.service.js';
+import { UsersService } from '../users/users.service.js';
 import { AlbumsService } from './albums.service.js';
 
 /** Avatars montrés dans l'aperçu d'une invitation. */
@@ -25,6 +26,7 @@ export class InvitesService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly albums: AlbumsService,
+    private readonly users: UsersService,
     config: ConfigService,
   ) {
     // Domaine public : uniquement dans la configuration, vérifiée au démarrage.
@@ -80,11 +82,13 @@ export class InvitesService {
         coverCacheKey: coverKey,
         ownerName: owner?.user.nickname ?? '',
         memberCount: album.members.length,
-        members: album.members.slice(0, PREVIEW_MEMBERS).map((m) => ({
-          id: m.user.id,
-          name: m.user.nickname,
-          avatarUrl: m.user.avatarUrl,
-        })),
+        members: await Promise.all(
+          album.members.slice(0, PREVIEW_MEMBERS).map(async (m) => ({
+            id: m.user.id,
+            name: m.user.nickname,
+            avatarUrl: await this.users.avatarUrlOf(m.user),
+          })),
+        ),
       },
     };
   }

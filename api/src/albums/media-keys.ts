@@ -33,6 +33,10 @@ export const MAX_BYTES = {
   display: 5 * 1024 * 1024,
   thumb: 1024 * 1024,
   cover: 5 * 1024 * 1024,
+  avatar: 2 * 1024 * 1024,
 } as const;
 
 export const coverPrefix = (albumId: string) => `${albumPrefix(albumId)}cover/`;
+
+/** Photos de profil d'un utilisateur, hors de tout album. */
+export const avatarPrefix = (userId: string) => `users/${userId}/avatar/`;

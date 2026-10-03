@@ -1,3 +1,4 @@
+import type { MeDto } from '@synkup/shared';
 import { Image } from 'expo-image';
 import { SymbolView } from 'expo-symbols';
 import { useEffect, useRef, useState } from 'react';
@@ -8,19 +9,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import { useProfile } from '@/hooks/use-profile';
+import { PageLoader } from '@/components/page-loader';
 import { useMyStats } from '@/queries/albums';
+import { useMeQuery, useUpdateMe } from '@/queries/me';
+import type { MeUpdate } from '@/services/me-api';
 import { pickSingleImage } from '@/services/photo-picker';
-import type { Profile, ProfileUpdate } from '@/services/profile-api';
 
 const AVATAR_SIZE = 112;
 const NICKNAME_MAX = 24;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const TOAST_MS = 2200;
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { profile, status, saving, save } = useProfile();
+  const meQuery = useMeQuery();
+  const updateMe = useUpdateMe();
   const stats = useMyStats().data ?? null;
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,20 +68,21 @@ export default function ProfileScreen() {
             <Text style={styles.subtitle}>C&apos;est toi que tes amis verront dans les albums</Text>
           </View>
 
-          {status === 'error' && (
+          {!meQuery.data && meQuery.isError && (
             <Text style={styles.errorText}>Impossible de charger ton profil.</Text>
           )}
 
-          {status === 'ready' && profile && (
+          {meQuery.data && (
             <ProfileForm
-              profile={profile}
+              me={meQuery.data}
               stats={stats}
-              saving={saving}
-              onSave={save}
+              saving={updateMe.isPending}
+              onSave={(update) => updateMe.mutateAsync(update).catch(() => null)}
               onToast={showToast}
             />
           )}
         </ScrollView>
+        {meQuery.isPending && <PageLoader />}
       </View>
 
       {toast && (
@@ -96,42 +99,38 @@ export default function ProfileScreen() {
 }
 
 type ProfileFormProps = {
-  profile: Profile;
+  me: MeDto;
   stats: { albums: number; photosShared: number } | null;
   saving: boolean;
-  onSave: (update: ProfileUpdate) => Promise<boolean>;
+  /** Renvoie le profil enregistré, ou `null` en cas d'échec. */
+  onSave: (update: MeUpdate) => Promise<MeDto | null>;
   onToast: (text: string) => void;
 };
 
 /** Formulaire monté une fois le profil connu : son brouillon part des valeurs enregistrées. */
-function ProfileForm({ profile, stats, saving, onSave, onToast }: ProfileFormProps) {
-  const [nickname, setNickname] = useState(profile.nickname);
-  const [email, setEmail] = useState(profile.email);
-  const [avatarUri, setAvatarUri] = useState<string | null>(profile.avatarUri);
+function ProfileForm({ me, stats, saving, onSave, onToast }: ProfileFormProps) {
+  const [nickname, setNickname] = useState(me.nickname);
+  // Photo nouvellement choisie sur le téléphone ; sinon on affiche celle du profil.
+  const [pickedAvatar, setPickedAvatar] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
 
   const trimmedNickname = nickname.trim();
-  const trimmedEmail = email.trim();
   const nicknameError =
     touched && trimmedNickname.length === 0
       ? 'Choisis un surnom.'
       : trimmedNickname.length > NICKNAME_MAX
         ? `${NICKNAME_MAX} caractères maximum.`
         : null;
-  const emailError =
-    touched && trimmedEmail.length > 0 && !EMAIL_PATTERN.test(trimmedEmail)
-      ? 'Cette adresse ne semble pas valide.'
-      : touched && trimmedEmail.length === 0
-        ? 'Indique ton adresse email.'
-        : null;
-  const dirty =
-    trimmedNickname !== profile.nickname ||
-    trimmedEmail !== profile.email ||
-    avatarUri !== profile.avatarUri;
+  const dirty = trimmedNickname !== me.nickname || pickedAvatar !== null;
+  const avatarSource = pickedAvatar
+    ? { uri: pickedAvatar }
+    : me.avatarUrl
+      ? { uri: me.avatarUrl, cacheKey: me.avatarCacheKey ?? undefined }
+      : null;
 
   const changeAvatar = async () => {
     const uri = await pickSingleImage();
-    if (uri) setAvatarUri(uri);
+    if (uri) setPickedAvatar(uri);
   };
 
   const submit = async () => {
@@ -140,10 +139,16 @@ function ProfileForm({ profile, stats, saving, onSave, onToast }: ProfileFormPro
       onToast('Rien à enregistrer');
       return;
     }
-    if (nicknameError || emailError) return;
-    const ok = await onSave({ nickname: trimmedNickname, email: trimmedEmail, avatarUri });
-    onToast(ok ? 'Profil enregistré' : 'Enregistrement impossible');
-    if (ok) setTouched(false);
+    if (nicknameError) return;
+    const saved = await onSave({
+      ...(trimmedNickname !== me.nickname && { nickname: trimmedNickname }),
+      ...(pickedAvatar && { avatarUri: pickedAvatar }),
+    });
+    onToast(saved ? 'Profil enregistré' : 'Enregistrement impossible');
+    if (saved) {
+      setTouched(false);
+      setPickedAvatar(null);
+    }
   };
 
   return (
@@ -155,9 +160,9 @@ function ProfileForm({ profile, stats, saving, onSave, onToast }: ProfileFormPro
           accessibilityRole="button"
           onPress={changeAvatar}
           style={({ pressed }) => [styles.avatarWrap, pressed && styles.avatarPressed]}>
-          {avatarUri ? (
+          {avatarSource ? (
             <Image
-              source={{ uri: avatarUri }}
+              source={avatarSource}
               contentFit="cover"
               transition={150}
               style={styles.avatar}
@@ -199,26 +204,18 @@ function ProfileForm({ profile, stats, saving, onSave, onToast }: ProfileFormPro
           autoCapitalize="words"
           autoCorrect={false}
           maxLength={NICKNAME_MAX + 4}
-          returnKeyType="next"
+          returnKeyType="done"
+          onSubmitEditing={submit}
           error={nicknameError}
           hint={`${trimmedNickname.length} / ${NICKNAME_MAX}`}
         />
+        {/* Liée à la connexion (Clerk) : affichée, pas modifiable ici. */}
         <TextField
           label="Adresse email"
-          value={email}
-          onChangeText={(v) => {
-            setEmail(v);
-            setTouched(true);
-          }}
-          placeholder="toi@exemple.fr"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoComplete="email"
-          returnKeyType="done"
-          onSubmitEditing={submit}
-          error={emailError}
-          hint="Elle sert à te retrouver quand un ami t'invite dans un album."
+          value={me.email}
+          onChangeText={() => undefined}
+          editable={false}
+          hint="C'est l'adresse de ta connexion, elle ne se modifie pas ici."
         />
       </View>
 

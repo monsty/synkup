@@ -1,9 +1,9 @@
-import { createClerkClient, type ClerkClient } from '@clerk/backend';
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 
 import type { CurrentUser } from '../auth/current-user.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { StorageService } from '../storage/storage.service.js';
+import { ClerkService } from './clerk.service.js';
 
 /**
  * Utilisateurs Synkup. L'identité vient de Clerk : à la première requête d'un compte, on lit son
@@ -11,18 +11,14 @@ import { PrismaService } from '../prisma/prisma.service.js';
  */
 @Injectable()
 export class UsersService {
-  private readonly clerk: ClerkClient;
   /** Comptes déjà présents en base : évite une lecture par requête. */
   private readonly known = new Map<string, CurrentUser>();
 
   constructor(
     private readonly prisma: PrismaService,
-    config: ConfigService,
-  ) {
-    this.clerk = createClerkClient({
-      secretKey: config.getOrThrow<string>('CLERK_SECRET_KEY'),
-    });
-  }
+    private readonly storage: StorageService,
+    private readonly clerk: ClerkService,
+  ) {}
 
   /** Renvoie l'utilisateur, en le créant à partir de Clerk s'il n'existe pas encore. */
   async ensure(id: string): Promise<CurrentUser> {
@@ -35,19 +31,19 @@ export class UsersService {
     });
     if (existing) return this.remember(existing);
 
-    const profile = await this.clerk.users.getUser(id);
-    const email = (profile.primaryEmailAddress ?? profile.emailAddresses[0])
-      ?.emailAddress;
-    if (!email) throw new Error(`Compte Clerk ${id} sans adresse email.`);
+    const profile = await this.clerk.getProfile(id);
+    if (!profile.email)
+      throw new Error(`Compte Clerk ${id} sans adresse email.`);
+    const email = profile.email.toLowerCase();
 
     const user = await this.prisma.user.upsert({
       where: { id },
       update: {},
       create: {
         id,
-        email: email.toLowerCase(),
-        nickname: profile.firstName?.trim() || email.split('@')[0],
-        avatarUrl: profile.hasImage ? profile.imageUrl : null,
+        email,
+        nickname: profile.firstName ?? email.split('@')[0],
+        avatarUrl: profile.imageUrl,
       },
       select: { id: true, email: true },
     });
@@ -63,6 +59,21 @@ export class UsersService {
       select: { id: true, email: true },
     });
     return this.remember(user);
+  }
+
+  /** Compte supprimé : il ne doit plus être servi par le cache. */
+  forget(id: string) {
+    this.known.delete(id);
+  }
+
+  /** Photo de profil à afficher : celle choisie dans l'app, sinon celle de Clerk. */
+  async avatarUrlOf(user: {
+    avatarKey: string | null;
+    avatarUrl: string | null;
+  }) {
+    return user.avatarKey
+      ? this.storage.readUrl(user.avatarKey)
+      : user.avatarUrl;
   }
 
   private remember(user: CurrentUser): CurrentUser {

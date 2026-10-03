@@ -33,9 +33,12 @@ export default function JoinScreen() {
   const [error, setError] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
-  const openAlbum = (albumId: string) =>
-    // Remplace l'invitation : retour arrière = liste des albums.
-    router.replace({ pathname: '/album/[id]', params: { id: albumId } });
+  const openAlbum = (albumId: string) => {
+    // Le lien a pu arriver n'importe où (pendant un tri, depuis un autre album) : on revient
+    // d'abord à l'accueil en fermant tout le reste, puis on ouvre l'album. Retour = accueil.
+    router.dismissTo('/');
+    router.push({ pathname: '/album/[id]', params: { id: albumId } });
+  };
 
   const join = () => {
     setError(null);

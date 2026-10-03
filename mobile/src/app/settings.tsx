@@ -1,7 +1,16 @@
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import { pushOnce } from '@/navigation/push-once';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
@@ -9,19 +18,22 @@ import { getLanguage } from '@/constants/languages';
 import { formatQuota, getPlan } from '@/constants/plans';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
-import { useMyUsage } from '@/queries/albums';
+import { useDeleteAccount, useMeQuery } from '@/queries/me';
 import { getSettingsSync, settingsApi, type Settings } from '@/services/settings-api';
+import { clearLocalAccountData } from '@/services/local-data';
 import { clearThumbs, thumbsSize } from '@/services/thumbnail-store';
 
 const APP_VERSION = '0.1.0';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
-  // Réglages locaux lus en synchrone : l'écran s'affiche d'un coup. Seul l'usage du quota
-  // arrive en arrière-plan et remplit sa ligne.
+  const { signOut, user } = useAuth();
+  // Réglages locaux lus en synchrone : l'écran s'affiche d'un coup. Offre et usage viennent de
+  // l'API (en cache après la première visite) et remplissent leur ligne.
   const [settings, setSettings] = useState<Settings>(() => getSettingsSync());
-  const usage = useMyUsage().data ?? null;
+  const me = useMeQuery().data;
+  const usage = me?.usage ?? null;
+  const deleteAccountMutation = useDeleteAccount();
   const [scrolled, setScrolled] = useState(false);
   const [offlineBytes, setOfflineBytes] = useState(thumbsSize);
 
@@ -56,22 +68,32 @@ export default function SettingsScreen() {
   const deleteAccount = () => {
     Alert.alert(
       'Supprimer ton compte ?',
-      'Tes albums, tes photos et ton profil seront définitivement effacés. Cette action est irréversible.',
+      "Les albums que tu as créés seront supprimés pour tout le monde, avec toutes leurs photos. Tes photos dans les albums de tes amis et ton profil seront aussi effacés. C'est définitif.",
       [
         { text: 'Annuler', style: 'cancel' },
         {
           text: 'Supprimer mon compte',
           style: 'destructive',
-          onPress: () => {
-            // POC : pas de backend, on se contente de fermer la session.
-            signOut();
-          },
+          onPress: () =>
+            deleteAccountMutation.mutate(undefined, {
+              onSuccess: async () => {
+                // Le compte n'existe plus : on efface ce que le téléphone gardait, puis la
+                // session (déjà invalide côté Clerk, d'où l'échec toléré).
+                if (user) clearLocalAccountData(user.id);
+                await signOut().catch(() => undefined);
+              },
+              onError: () =>
+                Alert.alert(
+                  'Suppression impossible',
+                  "Ton compte n'a pas pu être supprimé. Vérifie ta connexion et réessaie."
+                ),
+            }),
         },
       ]
     );
   };
 
-  const plan = getPlan(settings.plan);
+  const plan = me ? getPlan(me.plan) : null;
 
   return (
     <View style={styles.container}>
@@ -99,10 +121,10 @@ export default function SettingsScreen() {
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
               <RowIcon name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }} />
               <View style={styles.rowText}>
-                <Text style={styles.rowLabel}>Offre {plan.name}</Text>
+                <Text style={styles.rowLabel}>{plan ? `Offre ${plan.name}` : 'Mon offre'}</Text>
                 <Text style={styles.rowDetail}>
                   {usage
-                    ? `${formatQuota(usage.photos)} photo${usage.photos > 1 ? 's' : ''} sur ${formatQuota(plan.photoQuota)}`
+                    ? `${formatQuota(usage.photos)} photo${usage.photos > 1 ? 's' : ''} sur ${formatQuota(usage.photoQuota)}`
                     : ' '}
                 </Text>
               </View>
@@ -197,10 +219,15 @@ export default function SettingsScreen() {
           {/* Suppression de compte : volontairement en retrait, en texte discret tout en bas. */}
           <Pressable
             accessibilityRole="button"
+            disabled={deleteAccountMutation.isPending}
             onPress={deleteAccount}
             hitSlop={8}
             style={({ pressed }) => [styles.deleteLink, pressed && styles.pressed]}>
-            <Text style={styles.deleteText}>Supprimer mon compte</Text>
+            {deleteAccountMutation.isPending ? (
+              <ActivityIndicator size="small" color={Palette.textMuted} />
+            ) : (
+              <Text style={styles.deleteText}>Supprimer mon compte</Text>
+            )}
           </Pressable>
         </>
       </ScrollView>

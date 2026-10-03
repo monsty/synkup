@@ -1,39 +1,22 @@
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PageLoader } from '@/components/page-loader';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
-import {
-  formatPrice,
-  formatQuota,
-  getPlan,
-  PLANS,
-  type Plan,
-  type PlanId,
-} from '@/constants/plans';
+import { formatPrice, formatQuota, getPlan, PLANS, type Plan } from '@/constants/plans';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import { useMyUsage } from '@/queries/albums';
-import { settingsApi } from '@/services/settings-api';
+import { useMeQuery } from '@/queries/me';
 
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
-  const [planId, setPlanId] = useState<PlanId | null>(null);
-  const usage = useMyUsage().data ?? null;
+  // Offre et usage tels que l'API les applique.
+  const me = useMeQuery().data;
+  const usage = me?.usage ?? null;
   const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    settingsApi.getSettings().then((settings) => {
-      if (active) setPlanId(settings.plan);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const current = planId ? getPlan(planId) : null;
+  const current = me ? getPlan(me.plan) : null;
   const ratio = current && usage ? Math.min(1, usage.photos / current.photoQuota) : 0;
 
   const choose = (plan: Plan) => {

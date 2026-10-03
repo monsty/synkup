@@ -53,10 +53,32 @@ export type PhotoUploadUrlsDto = {
   uploads: { original: string; display: string; thumb: string };
 };
 
-/** Réponse de `POST /albums/:id/cover`. */
-export type CoverUploadUrlDto = {
+/** URL d'envoi d'un fichier unique (couverture, photo de profil), puis sa clé à confirmer. */
+export type UploadUrlDto = {
   key: string;
   uploadUrl: string;
+};
+
+/** Réponse de `POST /albums/:id/cover`. */
+export type CoverUploadUrlDto = UploadUrlDto;
+
+export type PlanId = 'free' | 'pro' | 'ultra';
+
+/** Le compte connecté : profil, offre et usage du quota (`GET /me`). */
+export type MeDto = {
+  id: string;
+  /** Géré par Clerk : modifiable seulement via la connexion. */
+  email: string;
+  nickname: string;
+  /** Photo choisie dans l'app, sinon celle du fournisseur de connexion. */
+  avatarUrl: string | null;
+  /** Clé stable pour le cache d'images quand la photo vient du bucket. */
+  avatarCacheKey: string | null;
+  /** ISO 8601 : date d'inscription. */
+  memberSince: string;
+  plan: PlanId;
+  /** Ce que compte le quota : photos des albums dont je suis propriétaire. */
+  usage: { photos: number; albums: number; photoQuota: number };
 };
 
 /** Lien d'invitation actif d'un album. */

@@ -15,11 +15,14 @@ type Step = 'welcome' | 'email' | 'code';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const CODE_LENGTH = 6;
 
-/** Trois photos en éventail, comme le paquet de l'écran de tri : l'app en une image. */
+/**
+ * Trois photos en éventail, comme le paquet de l'écran de tri : l'app en une image.
+ * Embarquées dans l'app : l'écran de connexion s'affiche d'un coup, même hors ligne.
+ */
 const HERO_PHOTOS = [
-  { uri: 'https://picsum.photos/seed/synkup-hero-1/400/520', rotate: '-10deg', offset: -46 },
-  { uri: 'https://picsum.photos/seed/synkup-hero-2/400/520', rotate: '0deg', offset: 0 },
-  { uri: 'https://picsum.photos/seed/synkup-hero-3/400/520', rotate: '10deg', offset: 46 },
+  { source: require('@/assets/images/hero-1.jpg'), rotate: '-10deg', offset: -46 },
+  { source: require('@/assets/images/hero-2.jpg'), rotate: '0deg', offset: 0 },
+  { source: require('@/assets/images/hero-3.jpg'), rotate: '10deg', offset: 46 },
 ];
 
 export default function SignInScreen() {
@@ -89,7 +92,7 @@ export default function SignInScreen() {
             <View style={styles.hero}>
               {HERO_PHOTOS.map((photo, index) => (
                 <View
-                  key={photo.uri}
+                  key={photo.offset}
                   style={[
                     styles.heroCard,
                     {
@@ -98,7 +101,7 @@ export default function SignInScreen() {
                     },
                   ]}>
                   <Image
-                    source={{ uri: photo.uri }}
+                    source={photo.source}
                     contentFit="cover"
                     style={StyleSheet.absoluteFill}
                   />

@@ -26,7 +26,10 @@ model User {
   id        String   @id // identifiant Clerk
   email     String   @unique
   nickname  String
+  /// Photo de profil fournie par Clerk (Google, Apple…), utilisée tant qu'il n'en a pas choisi.
   avatarUrl String?
+  /// Photo de profil choisie dans l'app (clé dans le bucket) : prioritaire sur `avatarUrl`.
+  avatarKey String?
   plan      Plan     @default(FREE)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

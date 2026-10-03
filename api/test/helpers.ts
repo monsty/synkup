@@ -6,12 +6,15 @@ import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { configureApp } from '../src/setup.js';
 import { StorageService } from '../src/storage/storage.service.js';
+import { ClerkService } from '../src/users/clerk.service.js';
 import { FakeStorage } from './fake-storage.js';
 
 export type TestApp = {
   app: INestApplication;
   prisma: PrismaService;
   storage: FakeStorage;
+  /** Comptes supprimés « chez Clerk » pendant le test. */
+  clerkDeleted: string[];
   /** Requêtes authentifiées en tant que `userId` (jeton de dev). */
   as: (userId: string) => ReturnType<typeof agentFor>;
   /** Requêtes sans jeton. */
@@ -33,9 +36,19 @@ function agentFor(app: INestApplication, userId: string) {
 
 export async function createTestApp(): Promise<TestApp> {
   const storage = new FakeStorage();
+  const clerkDeleted: string[] = [];
+  // Les tests n'appellent jamais Clerk : comptes créés par jeton de dev, suppressions notées.
+  const clerk = {
+    getProfile: async () => ({ email: null, firstName: null, imageUrl: null }),
+    deleteUser: async (id: string) => {
+      clerkDeleted.push(id);
+    },
+  };
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(StorageService)
     .useValue(storage)
+    .overrideProvider(ClerkService)
+    .useValue(clerk)
     .compile();
   const app = configureApp(moduleRef.createNestApplication());
   await app.init();
@@ -43,6 +56,7 @@ export async function createTestApp(): Promise<TestApp> {
     app,
     prisma: app.get(PrismaService),
     storage,
+    clerkDeleted,
     as: (userId) => agentFor(app, userId),
     anonymous: () => request(app.getHttpServer()),
   };

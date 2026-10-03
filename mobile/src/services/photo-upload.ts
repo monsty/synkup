@@ -5,7 +5,12 @@
  * 3. prépare l'affichage (1 600 px) et la miniature (480 px) en JPEG ;
  * 4. envoie les trois fichiers, puis confirme à l'API.
  */
-import type { CoverUploadUrlDto, PhotoDto, PhotoUploadUrlsDto } from '@synkup/shared';
+import type {
+  CoverUploadUrlDto,
+  PhotoDto,
+  PhotoUploadUrlsDto,
+  UploadUrlDto,
+} from '@synkup/shared';
 import { CryptoDigestAlgorithm, digest } from 'expo-crypto';
 import { File, UploadType } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -172,5 +177,27 @@ export async function uploadCover(albumId: string, localUri: string): Promise<st
     return key;
   } finally {
     discard(cover);
+  }
+}
+
+/** Côté le plus court de la photo de profil : affichée en rond, 112 pt au plus. */
+const AVATAR_MIN = 512;
+
+/** Photo de profil : un JPEG carré-ish de 512 px, envoyé au stockage. Renvoie sa clé. */
+export async function uploadAvatar(localUri: string): Promise<string> {
+  const { width, height } = await ImageManipulator.manipulate(localUri).renderAsync();
+  const avatar = await toJpeg(localUri, 0.85, {
+    source: { width, height },
+    size: AVATAR_MIN,
+    fit: 'short',
+  });
+  try {
+    const { key, uploadUrl } = await apiRequest<UploadUrlDto>('POST', '/me/avatar', {
+      byteSize: new File(avatar).size,
+    });
+    await put(avatar, uploadUrl, 'image/jpeg');
+    return key;
+  } finally {
+    discard(avatar);
   }
 }

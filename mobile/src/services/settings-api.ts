@@ -1,11 +1,11 @@
 /**
- * Réglages de l'utilisateur, persistés localement par compte (SQLite kv-store).
- * À remplacer par l'API quand le backend existera.
+ * Réglages propres au téléphone, persistés localement par compte (SQLite kv-store) : langue,
+ * préférences de notification (en attendant les notifications push). L'offre, elle, vient de
+ * l'API (`/me`).
  */
 import Storage from 'expo-sqlite/kv-store';
 
 import { getCurrentUserId } from '@/services/auth-api';
-import type { PlanId } from '@/constants/plans';
 
 export type Language = 'fr' | 'en';
 
@@ -19,13 +19,11 @@ export type NotificationSettings = {
 export type Settings = {
   language: Language;
   notifications: NotificationSettings;
-  plan: PlanId;
 };
 
 const DEFAULT_SETTINGS: Settings = {
   language: 'fr',
   notifications: { ownedAlbums: true, memberAlbums: true },
-  plan: 'free',
 };
 
 const NETWORK_DELAY_MS = 250;
