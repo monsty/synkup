@@ -148,7 +148,9 @@ rose à la place de l'icône pendant l'action.
   18, rangées de 60 avec icône rose dans un rond gris 36, libellé 16 gras, détail muted 13) :
   « Mon abonnement » (rangée pressable « Offre Gratuit », « 46 photos sur 1 000 », chevron →
   `/subscription`) ; « Notifications » (deux `Switch` roses : mes albums, albums où je suis
-  membre, persistés par compte) ; « Langue » (une rangée « Langue de l'application · Français » avec
+  membre, persistés par compte) ; « Stockage » (rangée « Photos hors ligne », détail
+  « Miniatures gardées pour voir tes albums sans réseau », taille à droite ; tap → alerte
+  « Libérer 48 Mo ? ») ; « Langue » (une rangée « Langue de l'application · Français » avec
   chevron → `/language`) ; « À propos » (version). Tout en bas, « Supprimer mon
   compte » en lien muted souligné, volontairement discret, confirmé par une alerte destructive.
 - Langue (`/language`) : titre « Langue », sous-titre « D'autres langues arrivent bientôt ».

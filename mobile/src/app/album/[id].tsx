@@ -292,6 +292,7 @@ export default function AlbumScreen() {
         scrolled={scrolled}
       />
       <PhotoGrid
+        albumId={albumId}
         photos={photos}
         refreshing={refreshing}
         onRefresh={refresh}

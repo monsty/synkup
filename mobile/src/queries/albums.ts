@@ -17,6 +17,7 @@ import {
   type UpdateAlbumInput,
 } from '@/services/album-api';
 import { getCurrentUserId } from '@/services/auth-api';
+import { pruneAlbumThumbs, pruneAlbums } from '@/services/thumbnail-store';
 import type { Album, AlbumRole, GalleryPhoto } from '@/types/album';
 
 export const albumKeys = {
@@ -32,8 +33,15 @@ function storeAlbum(client: QueryClient, album: Album) {
   return client.invalidateQueries({ queryKey: albumKeys.list() });
 }
 
+/** Liste des albums ; au passage, les miniatures des albums quittés ou supprimés partent. */
+async function fetchAlbums() {
+  const albums = await albumApi.getAlbums();
+  pruneAlbums(albums.map((a) => a.id));
+  return albums;
+}
+
 export function useAlbumsQuery() {
-  return useQuery({ queryKey: albumKeys.list(), queryFn: albumApi.getAlbums });
+  return useQuery({ queryKey: albumKeys.list(), queryFn: fetchAlbums });
 }
 
 /** Détail d'un album ; `null` s'il n'existe pas ou si je n'en suis pas membre. */
@@ -51,7 +59,11 @@ export function useAlbumQuery(albumId: string) {
 export function useAlbumPhotosQuery(albumId: string) {
   return useQuery({
     queryKey: albumKeys.photos(albumId),
-    queryFn: () => albumApi.getPhotos(albumId),
+    queryFn: async () => {
+      const photos = await albumApi.getPhotos(albumId);
+      pruneAlbumThumbs(albumId, photos.map((p) => p.id));
+      return photos;
+    },
   });
 }
 
@@ -62,7 +74,7 @@ export function useAlbumPhotosQuery(albumId: string) {
 export function useMyUsage() {
   return useQuery({
     queryKey: albumKeys.list(),
-    queryFn: albumApi.getAlbums,
+    queryFn: fetchAlbums,
     select: (albums) => {
       const owned = albums.filter((a) => a.myRole === 'owner');
       return { photos: owned.reduce((sum, a) => sum + a.photoCount, 0), albums: owned.length };
@@ -74,7 +86,7 @@ export function useMyUsage() {
 export function useMyStats() {
   return useQuery({
     queryKey: albumKeys.list(),
-    queryFn: albumApi.getAlbums,
+    queryFn: fetchAlbums,
     select: (albums) => {
       const me = getCurrentUserId();
       const photosShared = albums.reduce(

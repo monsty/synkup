@@ -11,6 +11,7 @@ import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 import { useMyUsage } from '@/queries/albums';
 import { getSettingsSync, settingsApi, type Settings } from '@/services/settings-api';
+import { clearThumbs, thumbsSize } from '@/services/thumbnail-store';
 
 const APP_VERSION = '0.1.0';
 
@@ -22,6 +23,7 @@ export default function SettingsScreen() {
   const [settings, setSettings] = useState<Settings>(() => getSettingsSync());
   const usage = useMyUsage().data ?? null;
   const [scrolled, setScrolled] = useState(false);
+  const [offlineBytes, setOfflineBytes] = useState(thumbsSize);
 
   const toggle = async (key: 'ownedAlbums' | 'memberAlbums', value: boolean) => {
     // Optimiste : l'interrupteur bouge tout de suite, le stockage suit.
@@ -30,6 +32,25 @@ export default function SettingsScreen() {
       notifications: { ...current.notifications, [key]: value },
     }));
     setSettings(await settingsApi.updateNotifications({ [key]: value }));
+  };
+
+  const freeSpace = () => {
+    if (offlineBytes === 0) return;
+    Alert.alert(
+      `Libérer ${formatBytes(offlineBytes)} ?`,
+      'Les miniatures gardées pour le mode hors ligne seront effacées. Elles reviendront quand tu rouvriras tes albums.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Libérer',
+          style: 'destructive',
+          onPress: () => {
+            clearThumbs();
+            setOfflineBytes(thumbsSize());
+          },
+        },
+      ]
+    );
   };
 
   const deleteAccount = () => {
@@ -130,6 +151,24 @@ export default function SettingsScreen() {
             </View>
           </Section>
 
+          <Section title="Stockage">
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Libérer l'espace des photos hors ligne"
+              disabled={offlineBytes === 0}
+              onPress={freeSpace}
+              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+              <RowIcon name={{ ios: 'internaldrive', android: 'storage', web: 'storage' }} />
+              <View style={styles.rowText}>
+                <Text style={styles.rowLabel}>Photos hors ligne</Text>
+                <Text style={styles.rowDetail}>
+                  Miniatures gardées pour voir tes albums sans réseau
+                </Text>
+              </View>
+              <Text style={styles.rowValue}>{formatBytes(offlineBytes)}</Text>
+            </Pressable>
+          </Section>
+
           <Section title="Langue">
             <Pressable
               accessibilityRole="button"
@@ -167,6 +206,13 @@ export default function SettingsScreen() {
       </ScrollView>
     </View>
   );
+}
+
+/** « 0 Ko », « 840 Ko », « 48 Mo », « 1,2 Go ». */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+  if (bytes < 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} Mo`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1).replace('.', ',')} Go`;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

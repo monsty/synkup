@@ -11,6 +11,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { Asset } from 'expo-media-library';
 
 import { ApiError, apiRequest } from '@/services/api-client';
+import { keepUploadedThumb } from '@/services/thumbnail-store';
 import type { GalleryPhoto } from '@/types/album';
 
 /** Côté le plus long de la version d'affichage (plein écran, couverture). */
@@ -138,10 +139,13 @@ export async function uploadGalleryPhoto(
       put(thumb, urls.uploads.thumb, 'image/jpeg'),
     ]);
 
-    return await apiRequest<UploadedPhotoDto>('POST', `/albums/${albumId}/photos`, {
+    const uploaded = await apiRequest<UploadedPhotoDto>('POST', `/albums/${albumId}/photos`, {
       ...meta,
       photoId: urls.photoId,
     });
+    // La miniature est déjà là : on la garde pour la grille hors ligne.
+    await keepUploadedThumb(albumId, uploaded.id, thumb);
+    return uploaded;
   } finally {
     discard(...temporary);
   }

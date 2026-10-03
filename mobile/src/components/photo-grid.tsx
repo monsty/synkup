@@ -14,6 +14,7 @@ import {
 
 import { Palette, Radii, Spacing } from '@/constants/theme';
 import { useExpiredUrlRetry } from '@/hooks/use-expired-url-retry';
+import { keepDisplayedThumb, localThumbUri } from '@/services/thumbnail-store';
 import type { AlbumPhoto } from '@/types/album';
 
 const COLUMNS = 3;
@@ -21,6 +22,8 @@ const GAP = Spacing.two;
 const SIDE_PADDING = Spacing.three;
 
 type Props = {
+  /** Pour retrouver les miniatures gardées sur le téléphone. */
+  albumId: string;
   photos: AlbumPhoto[];
   refreshing: boolean;
   onRefresh: () => void;
@@ -39,7 +42,23 @@ type Props = {
   ListEmptyComponent?: React.ReactElement;
 };
 
+/**
+ * Miniature d'une tuile : le fichier gardé sur le téléphone s'il existe (affichage hors ligne),
+ * sinon le bucket, et dans ce cas on la garde dès qu'elle est chargée.
+ */
+function thumbSource(albumId: string, photo: AlbumPhoto, retryExpired: () => void) {
+  const local = localThumbUri(albumId, photo.id);
+  if (local) return { source: { uri: local } };
+  const cacheKey = `${photo.id}:thumb`;
+  return {
+    source: { uri: photo.thumbUri, cacheKey },
+    onLoad: () => keepDisplayedThumb(albumId, photo.id, cacheKey),
+    onError: retryExpired,
+  };
+}
+
 export function PhotoGrid({
+  albumId,
   photos,
   refreshing,
   onRefresh,
@@ -98,8 +117,7 @@ export function PhotoGrid({
               pressed && styles.tilePressed,
             ]}>
             <Image
-              source={{ uri: item.thumbUri, cacheKey: `${item.id}:thumb` }}
-              onError={retryExpired}
+              {...thumbSource(albumId, item, retryExpired)}
               recyclingKey={item.id}
               contentFit="cover"
               transition={150}

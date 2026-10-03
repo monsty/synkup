@@ -32,7 +32,7 @@ export default function ManageAlbumScreen() {
   const { albumId } = useLocalSearchParams<{ albumId: string }>();
   const insets = useSafeAreaInsets();
   const { data: album, isPending, isError } = useAlbumQuery(albumId);
-  const status = isPending ? 'loading' : isError || !album ? 'error' : 'ready';
+  const status = album ? 'ready' : isPending && !isError ? 'loading' : 'error';
   const [scrolled, setScrolled] = useState(false);
 
   return (

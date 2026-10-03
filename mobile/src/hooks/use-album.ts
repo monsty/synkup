@@ -19,14 +19,15 @@ export function useAlbum(albumId: string) {
   const { refreshing, refresh } = useManualRefresh(refetch);
 
   const album = albumQuery.data ?? null;
+  // Des données en cache (même anciennes) valent mieux qu'un écran d'erreur hors ligne.
   const status: Status =
-    albumQuery.isError || photosQuery.isError
-      ? 'error'
-      : albumQuery.isPending || photosQuery.isPending
-        ? 'loading'
-        : album
-          ? 'ready'
-          : 'not-found';
+    albumQuery.data !== undefined && photosQuery.data !== undefined
+      ? album
+        ? 'ready'
+        : 'not-found'
+      : albumQuery.isError || photosQuery.isError
+        ? 'error'
+        : 'loading';
 
   return { album, photos: photosQuery.data ?? [], status, refreshing, refresh };
 }

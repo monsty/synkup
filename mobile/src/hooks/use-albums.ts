@@ -7,6 +7,8 @@ type Status = 'loading' | 'ready' | 'error';
 export function useAlbums() {
   const query = useAlbumsQuery();
   const { refreshing, refresh } = useManualRefresh(query.refetch);
-  const status: Status = query.isPending ? 'loading' : query.isError ? 'error' : 'ready';
+  // Des données en cache (même anciennes) valent mieux qu'un écran d'erreur hors ligne.
+  const status: Status =
+    query.data !== undefined ? 'ready' : query.isError ? 'error' : 'loading';
   return { albums: query.data ?? [], status, refreshing, refresh };
 }
