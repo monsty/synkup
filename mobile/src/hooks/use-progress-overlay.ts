@@ -25,6 +25,16 @@ export function useProgressOverlay() {
     setOverlay({ kind: 'progress', title, done, total });
   }, []);
 
+  /** Attente bloquante sans avancement connu ; `clear` pour la lever sans résultat. */
+  const busy = useCallback((title: string) => {
+    setOverlay({ kind: 'busy', title });
+  }, []);
+
+  const clear = useCallback(() => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    setOverlay(null);
+  }, []);
+
   /**
    * Affiche le résultat puis referme la modale toute seule. Résout une fois la modale fermée,
    * pour enchaîner (par exemple quitter l'écran) sans couper l'affichage du résultat.
@@ -43,7 +53,7 @@ export function useProgressOverlay() {
     });
   }, []);
 
-  return { overlay, progress, finish };
+  return { overlay, progress, busy, clear, finish };
 }
 
 /** « 3 photos envoyées · 1 en échec », ou un texte de repli si rien ne s'est passé. */

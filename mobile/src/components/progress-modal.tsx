@@ -1,6 +1,6 @@
 import { BlurView } from 'expo-blur';
 import { SymbolView } from 'expo-symbols';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -14,6 +14,8 @@ import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 
 export type ProgressOverlay =
   | { kind: 'progress'; title: string; done: number; total: number }
+  /** Attente sans avancement connu (le système prépare les photos choisies). */
+  | { kind: 'busy'; title: string }
   | { kind: 'done'; text: string; error?: boolean };
 
 type Props = {
@@ -26,8 +28,8 @@ const CARD_HEIGHT = 150;
 
 /**
  * Modale centrée qui bloque l'écran pendant une opération par lots (enregistrement, envoi) :
- * titre, compteur, barre de progression, puis résultat avec une coche avant de disparaître.
- * Pilotée par `useProgressOverlay`.
+ * titre, compteur, barre de progression (ou un spinner quand l'avancement est inconnu), puis
+ * résultat avec une coche avant de disparaître. Pilotée par `useProgressOverlay`.
  */
 export function ProgressModal({ overlay }: Props) {
   if (!overlay) return null;
@@ -50,6 +52,8 @@ export function ProgressModal({ overlay }: Props) {
           style={styles.card}>
           {overlay.kind === 'progress' ? (
             <ProgressContent title={overlay.title} done={overlay.done} total={overlay.total} />
+          ) : overlay.kind === 'busy' ? (
+            <BusyContent title={overlay.title} />
           ) : (
             <DoneContent text={overlay.text} error={overlay.error} />
           )}
@@ -74,6 +78,15 @@ function ProgressContent({ title, done, total }: { title: string; done: number; 
       <View style={styles.track}>
         <Animated.View style={[styles.fill, fillStyle]} />
       </View>
+    </>
+  );
+}
+
+function BusyContent({ title }: { title: string }) {
+  return (
+    <>
+      <ActivityIndicator size="large" color={Palette.pink} />
+      <Text style={styles.title}>{title}</Text>
     </>
   );
 }

@@ -244,7 +244,9 @@ rose à la place de l'icône pendant l'action.
   photos hors du flux de swipe ; les photos choisies partent dans la file d'envoi (voir plus
   bas) et sont retirées des candidates, même celles déjà envoyées depuis ce téléphone (pour
   renvoyer une photo supprimée de l'album ; l'API refuse les vrais doublons) ; la
-  `ProgressModal` ne sert qu'à dire « Déjà en cours d'envoi » ; si des photos partent, l'écran de
+  `ProgressModal` s'affiche derrière le sélecteur en mode attente (spinner rose large, « Préparation
+  des photos… ») : quand le système referme le sélecteur et copie les fichiers, elle bloque
+  l'écran ; annuler la lève. Elle finit par « Déjà en cours d'envoi » si rien ne part ; si des photos partent, l'écran de
   tri se ferme aussitôt pour revenir à l'album suivre l'envoi (y compris depuis l'état « Tout
   est trié »).
 - Paquet de swipe : deux cartes visibles (dessus, derrière réduite à 0,92 et décalée de 18) et

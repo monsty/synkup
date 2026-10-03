@@ -46,20 +46,28 @@ export default function SwipeScreen() {
 
   const remaining = candidates.length;
 
-  // Sélection manuelle dans la galerie, via le sélecteur natif du système. Les photos partent
-  // dans la file d'arrière-plan : on revient aussitôt à l'album, dont le bandeau montre
-  // l'avancement. La modale ne sert qu'à dire que tout était déjà en file.
+  // Sélection manuelle dans la galerie, via le sélecteur natif du système. Une fois la
+  // sélection validée, le système prépare encore les fichiers avant de nous rendre la main :
+  // la modale « Préparation des photos… », posée derrière le sélecteur, bloque l'écran
+  // pendant ce temps. Puis les photos partent dans la file d'arrière-plan et on revient
+  // aussitôt à l'album, dont le bandeau montre l'avancement.
   const [picking, setPicking] = useState(false);
-  const { overlay, finish } = useProgressOverlay();
+  const { overlay, busy, clear, finish } = useProgressOverlay();
   const pickFromGallery = async () => {
     if (picking) return;
     setPicking(true);
+    busy('Préparation des photos…');
     try {
       const chosen = await pickPhotosFromGallery();
-      if (chosen.length === 0) return;
+      if (chosen.length === 0) {
+        clear();
+        return;
+      }
       const { queued } = sendMany(chosen);
       if (queued > 0) close();
       else await finish('Déjà en cours d’envoi');
+    } catch {
+      clear();
     } finally {
       setPicking(false);
     }
