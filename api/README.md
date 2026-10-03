@@ -5,7 +5,7 @@ API NestJS de Synkup : utilisateurs, albums, membres et photos. Postgres via Pri
 ## Démarrer
 
 ```bash
-nvm use                 # Node 22.23 (voir .nvmrc)
+nvm use                 # Node 24 (voir .nvmrc)
 npm install
 cp .env.example .env    # puis renseigner DATABASE_URL
 npx prisma migrate dev  # crée la base et génère le client
@@ -39,5 +39,5 @@ Le client Prisma est généré dans `src/generated/prisma` (ignoré par git) : `
 - Le quota de l'offre compte les photos actives des albums dont l'utilisateur est OWNER, et
   c'est le serveur qui refuse quand il est plein.
 - Les invitations sont des jetons opaques, expirables et révocables.
-- Toolchain : Node 22.23 + npm 12 (`packageManager`). Les npm 10.x plantent sur le graphe de
+- Toolchain : Node 24 + npm 12 (`packageManager`). Les npm 10.x plantent sur le graphe de
   dépendances de Nest 12 / TypeScript 6 (`Cannot read properties of null (reading 'edgesOut')`).
