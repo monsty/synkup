@@ -106,6 +106,11 @@ export const albumApi = {
     return uploadGalleryPhoto(albumId, photo);
   },
 
+  /** Quitte l'album (membre) ; mes photos y restent. */
+  async leaveAlbum(albumId: string): Promise<void> {
+    await apiRequest<void>('POST', `/albums/${albumId}/leave`);
+  },
+
   /** Nom, période ou couverture : le serveur refuse si je ne suis pas propriétaire. */
   async updateAlbum(albumId: string, input: UpdateAlbumInput): Promise<Album> {
     const { coverUri, ...rest } = input;

@@ -27,9 +27,16 @@ export function setTokenGetter(getter: TokenGetter): void {
 export class ApiError extends Error {
   constructor(
     readonly status: number,
-    message: string
+    message: string,
+    /** Cas que l'app traite à part (`duplicate`, `quota_reached`…), quand l'API en donne un. */
+    readonly code?: string
   ) {
     super(message);
+  }
+
+  /** Erreur passagère (réseau, serveur, jeton à rafraîchir) : réessayer a un sens. */
+  get transient(): boolean {
+    return this.status === 0 || this.status === 401 || this.status === 408 || this.status === 429 || this.status >= 500;
   }
 }
 
@@ -56,9 +63,9 @@ export async function apiRequest<T>(method: Method, path: string, body?: unknown
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     // Nest renvoie `message` en texte, ou en liste pour les erreurs de validation.
-    const raw = (data as { message?: string | string[] } | null)?.message;
-    const message = Array.isArray(raw) ? raw[0] : raw;
-    throw new ApiError(response.status, message ?? 'Une erreur est survenue.');
+    const body = data as { message?: string | string[]; code?: string } | null;
+    const message = Array.isArray(body?.message) ? body.message[0] : body?.message;
+    throw new ApiError(response.status, message ?? 'Une erreur est survenue.', body?.code);
   }
   return data as T;
 }

@@ -92,13 +92,13 @@ rose à la place de l'icône pendant l'action.
   (28, bord `card` 2 px, max 4 puis « +N ») avec « N personnes » et un chevron rose dans un
   rond gris. Sans couverture : icône et « Aucune photo pour le moment » sur `cardBackground`.
   Pression : opacité 0,9, échelle 0,985. Tri des albums : en cours, à venir, terminés.
-- Mon profil (`/profile`, depuis le menu, profil local lu en synchrone : pas de loader) : chevron retour + marque, titre « Mon profil »,
+- Mon profil (`/profile`, depuis le menu, profil servi par l'API `/me`, en cache après la première visite) : chevron retour + marque, titre « Mon profil »,
   sous-titre centré. Photo de profil ronde de 112 au centre (bord `card` 4, pastille rose 36
   avec appareil photo en bas à droite, « Touche la photo pour la changer » dessous ; le tap
   ouvre le sélecteur natif, sans recadrage : sur iOS le recadrage force l'ancien contrôleur
   photo, lent à s'ouvrir). Pour habiller la page sans l'alourdir : une
   carte `card` arrondie 18 avec deux chiffres séparés par un filet (albums, photos
-  partagées). Formulaire : deux `TextField` (surnom, email) puis pilule rose
+  partagées). Formulaire : deux `TextField` (surnom ; email en lecture seule, géré par la connexion, avec l'aide « C'est l'adresse de ta connexion, elle ne se modifie pas ici. ») puis pilule rose
   « Enregistrer » 56 pleine largeur (ombre seulement quand il y a quelque chose à enregistrer).
   Retour par un toast sombre en haut, sous la barre de statut (« Profil enregistré », 2,2 s).
 - `TextField` : libellé en capitales 13 muted au-dessus, carte `card` arrondie 18 de 56 de
@@ -144,7 +144,9 @@ rose à la place de l'icône pendant l'action.
   existent, sinon la pilule vient au bord droit). Deux rôles seulement. Tap par le propriétaire : feuille
   d'actions système (« Transférer la propriété », « Retirer de l'album » en destructif), chacune
   confirmée par une alerte ; transférer rétrograde l'ancien propriétaire en membre. En bas,
-  pilule rose « Inviter quelqu'un » qui ouvre la `ShareSheet`.
+  pilule rose « Inviter quelqu'un » qui ouvre la `ShareSheet`, puis, pour un membre seulement,
+  « Quitter l'album » en lien muted souligné (alerte destructive ; ses photos restent dans
+  l'album ; retour à la liste des albums).
 - Paramètres (`/settings`, depuis le menu, réglages lus en synchrone : pas de loader, seule
   la ligne d'usage du quota se remplit en arrière-plan) : titre « Paramètres », sous-titre « Langue,
   notifications et abonnement ». Sections (libellé en capitales muted + carte `card` arrondie
@@ -239,11 +241,23 @@ rose à la place de l'icône pendant l'action.
 - Tri (swipe) : à droite de l'étiquette « N à trier », un rond gris 40 avec l'icône galerie
   rose (`photo.on.rectangle.angled` / `photo_library`) ouvre le sélecteur natif du système
   (`expo-image-picker`, PHPicker / Photo Picker, multi-sélection sans limite) pour choisir des
-  photos hors du flux de swipe ; les photos choisies sont envoyées une par une dans la
-  `ProgressModal` (titre « Envoi », compteur, barre), retirées des candidates, et celles déjà
-  dans l'album sont ignorées ; le résultat s'affiche puis la modale se ferme seule, et si au moins une photo est partie
-  l'écran de tri se ferme dans la foulée pour revenir à l'album (y compris depuis l'état
-  « Tout est trié »).
+  photos hors du flux de swipe ; les photos choisies partent dans la file d'envoi (voir plus
+  bas), sont retirées des candidates, et celles déjà dans l'album sont ignorées ; la
+  `ProgressModal` ne sert qu'à dire « Déjà dans l'album » ; si des photos partent, l'écran de
+  tri se ferme aussitôt pour revenir à l'album suivre l'envoi (y compris depuis l'état « Tout
+  est trié »).
+- Paquet de swipe : deux cartes visibles (dessus, derrière réduite à 0,92 et décalée de 18) et
+  quatre cartes invisibles montées derrière pour précharger les photos suivantes à la taille de
+  la carte ; une carte promue garde son instance, donc son image.
+- File d'envoi (`upload-queue`) : chaque photo acceptée au swipe part en arrière-plan, deux à la
+  fois, sans bloquer le tri ni la navigation ; la file survit au redémarrage, attend le réseau,
+  réessaie les échecs passagers puis garde les échecs. Dans le tri, un spinner rose à côté de
+  « N à trier » tant que des envois de l'album sont en cours. Dans l'album, sous le bloc titre,
+  bandeau `UploadBanner` (carte `card` 18, rond gris 36 avec spinner, texte 14 gras
+  `tabular-nums`) : « Envoi des photos · 3 / 12 » avec barre rose 6, puis « 12 photos envoyées »
+  avec coche, affiché tant qu'on n'est pas revenu à la liste des albums ; si des envois ont échoué, rond `text` avec « ! », « 2 photos n'ont pas pu
+  être envoyées », la raison en muted 13, et deux actions texte à droite : « Ignorer » muted
+  (les photos reviennent au tri) et « Réessayer » rose.
   Modale transparente en fondu, `BlurView` clair (intensité 70) + voile blanc
   à 30 % par-dessus l'album. Carte plein cadre arrondie 40 avec la date de la photo en pilule
   sombre centrée en bas. Actions : rond gris 64 ✕ rose, puis rond rose 72 avec ombre et

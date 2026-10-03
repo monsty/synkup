@@ -12,6 +12,7 @@ import type { AlbumDto, CoverUploadUrlDto } from '@synkup/shared';
 import { AlbumRole } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StorageService } from '../storage/storage.service.js';
+import { UsersService } from '../users/users.service.js';
 import type { CreateAlbumDto, UpdateAlbumDto } from './albums.dto.js';
 import { albumPrefix, coverPrefix } from './media-keys.js';
 
@@ -36,6 +37,7 @@ export class AlbumsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly users: UsersService,
   ) {}
 
   /**
@@ -174,6 +176,22 @@ export class AlbumsService {
     return this.getForUser(albumId, userId);
   }
 
+  /**
+   * Quitte l'album. Les photos qu'on y a envoyées y restent : on les a partagées. Le
+   * propriétaire, lui, transfère ou supprime l'album.
+   */
+  async leave(albumId: string, userId: string) {
+    const role = await this.memberRole(albumId, userId);
+    if (role === AlbumRole.OWNER) {
+      throw new BadRequestException(
+        "Le propriétaire ne peut pas quitter l'album : transfère-le à un membre ou supprime-le.",
+      );
+    }
+    await this.prisma.albumMember.delete({
+      where: { albumId_userId: { albumId, userId } },
+    });
+  }
+
   /** Rôle de l'utilisateur dans l'album ; 404 s'il n'en est pas membre (on ne révèle rien). */
   async memberRole(albumId: string, userId: string): Promise<AlbumRole> {
     const member = await this.prisma.albumMember.findUnique({
@@ -228,13 +246,15 @@ export class AlbumsService {
               album.members.find((m) => m.userId === userId)?.role ??
                 AlbumRole.MEMBER
             ],
-          members: album.members.map((m) => ({
-            id: m.user.id,
-            name: m.user.nickname,
-            avatarUrl: m.user.avatarUrl,
-            role: ROLE[m.role],
-            photoCount: photoCount(album.id, m.user.id),
-          })),
+          members: await Promise.all(
+            album.members.map(async (m) => ({
+              id: m.user.id,
+              name: m.user.nickname,
+              avatarUrl: await this.users.avatarUrlOf(m.user),
+              role: ROLE[m.role],
+              photoCount: photoCount(album.id, m.user.id),
+            })),
+          ),
         };
       }),
     );

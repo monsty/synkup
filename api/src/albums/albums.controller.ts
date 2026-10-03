@@ -88,6 +88,13 @@ export class AlbumsController {
     return this.albums.removeMember(id, user.id, memberId);
   }
 
+  /** Quitter l'album (membre). Le propriétaire transfère ou supprime l'album. */
+  @Post(':id/leave')
+  @HttpCode(204)
+  leave(@User() user: CurrentUser, @Param('id') id: string) {
+    return this.albums.leave(id, user.id);
+  }
+
   /** URL d'envoi d'une couverture choisie à la main ; puis `PATCH /albums/:id` avec la clé. */
   @Post(':id/cover')
   coverUpload(

@@ -24,6 +24,14 @@ const MAX_ROTATION_DEG = 14;
 const BACK_CARD_SCALE = 0.92;
 const BACK_CARD_OFFSET_Y = 18;
 const CARD_RADIUS = 40;
+/**
+ * Cartes montées derrière le paquet, invisibles : leurs photos se chargent et se décodent à
+ * l'avance (à la taille de la carte), pour que les swipes rapides n'attendent jamais une image.
+ */
+const PRELOAD_AHEAD = 4;
+
+/** Dessus (gestes, tampons), derrière (visible, réduite), ou préchargée (invisible). */
+type CardRole = 'top' | 'next' | 'hidden';
 
 type SwipeCardHandle = {
   swipe: (decision: ReviewDecision) => void;
@@ -31,14 +39,15 @@ type SwipeCardHandle = {
 
 type SwipeCardProps = {
   photo: GalleryPhoto;
-  isTop: boolean;
+  role: CardRole;
   /** Position normalisée de la carte du dessus : -1 (gauche) … 0 … 1 (droite). */
   progress: SharedValue<number>;
   onSwiped: (photo: GalleryPhoto, decision: ReviewDecision) => void;
   ref?: Ref<SwipeCardHandle>;
 };
 
-function SwipeCard({ photo, isTop, progress, onSwiped, ref }: SwipeCardProps) {
+function SwipeCard({ photo, role, progress, onSwiped, ref }: SwipeCardProps) {
+  const isTop = role === 'top';
   const { width } = useWindowDimensions();
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -110,11 +119,15 @@ function SwipeCard({ photo, isTop, progress, onSwiped, ref }: SwipeCardProps) {
 
   return (
     <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.card, cardStyle]}>
+      <Animated.View
+        pointerEvents={role === 'hidden' ? 'none' : 'auto'}
+        style={[styles.card, cardStyle, role === 'hidden' && styles.hiddenCard]}>
         <Image
           source={{ uri: photo.id }}
+          recyclingKey={photo.id}
+          priority={role === 'hidden' ? 'low' : 'high'}
           contentFit="cover"
-          transition={120}
+          transition={role === 'hidden' ? 0 : 120}
           style={StyleSheet.absoluteFill}
         />
 
@@ -150,7 +163,10 @@ export function SwipeDeck({ photos, onDecide }: SwipeDeckProps) {
   const topCardRef = useRef<SwipeCardHandle>(null);
 
   const top = photos[0];
-  const next = photos[1];
+  // Du fond vers le dessus : les cartes préchargées, puis celle de derrière, puis celle du dessus.
+  // Les clés sont stables : une carte promue garde son instance, donc son image déjà décodée.
+  const stack = photos.slice(0, 2 + PRELOAD_AHEAD);
+  const roleOf = (index: number): CardRole => (index === 0 ? 'top' : index === 1 ? 'next' : 'hidden');
 
   // On remet la progression à zéro seulement une fois la nouvelle carte du dessus en place.
   // La faire avant provoquait un zoom visible : l'ancienne carte de derrière repassait
@@ -166,18 +182,19 @@ export function SwipeDeck({ photos, onDecide }: SwipeDeckProps) {
   return (
     <View style={styles.deck}>
       <View style={styles.cards}>
-        {[next, top].map((photo) =>
-          photo ? (
+        {stack
+          .map((photo, index) => ({ photo, role: roleOf(index) }))
+          .reverse()
+          .map(({ photo, role }) => (
             <SwipeCard
               key={photo.id}
               photo={photo}
-              isTop={photo.id === top?.id}
+              role={role}
               progress={progress}
               onSwiped={handleSwiped}
-              ref={photo.id === top?.id ? topCardRef : undefined}
+              ref={role === 'top' ? topCardRef : undefined}
             />
-          ) : null
-        )}
+          ))}
       </View>
 
       <View style={styles.actions}>
@@ -227,6 +244,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
+  },
+  hiddenCard: {
+    opacity: 0,
   },
   card: {
     position: 'absolute',

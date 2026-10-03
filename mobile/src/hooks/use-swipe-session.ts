@@ -2,11 +2,12 @@ import { usePermissions } from 'expo-media-library';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
-import { useAlbumQuery, useUploadPhoto } from '@/queries/albums';
+import { useAlbumUploads } from '@/hooks/use-upload-queue';
+import { useAlbumQuery } from '@/queries/albums';
 import { getGalleryPhotosBetween } from '@/services/gallery';
-import { DuplicatePhotoError } from '@/services/photo-upload';
-import { getDevicePhotos, markPhotoOnDevice } from '@/services/device-photos-store';
+import { getDevicePhotos } from '@/services/device-photos-store';
 import { getReviews, saveReview } from '@/services/review-store';
+import { enqueueUploads } from '@/services/upload-queue';
 import { getAlbumRange, type GalleryPhoto, type ReviewDecision } from '@/types/album';
 
 export type SwipeSessionStatus =
@@ -14,23 +15,24 @@ export type SwipeSessionStatus =
 
 /**
  * Pilote une session de tri : permission galerie, chargement des photos de la période
- * de l'album jamais proposées, et enregistrement des décisions (envoi ou passe).
+ * de l'album jamais proposées, et enregistrement des décisions (envoi ou passe). Les envois
+ * partent dans la file d'arrière-plan : on peut swiper, et quitter l'écran, sans les attendre.
  */
 export function useSwipeSession(albumId: string) {
   const albumQuery = useAlbumQuery(albumId);
   const album = albumQuery.data ?? null;
-  const { mutateAsync: uploadPhoto } = useUploadPhoto();
   const [permission, requestPermission] = usePermissions({ granularPermissions: ['photo'] });
   const [candidates, setCandidates] = useState<GalleryPhoto[] | null>(null);
   const [galleryError, setError] = useState<string | null>(null);
+  // L'album en cache suffit : la galerie est locale et les envois attendent le réseau.
   const error =
     galleryError ??
-    (albumQuery.isError
+    (albumQuery.data === undefined && albumQuery.isError
       ? albumQuery.error.message
       : albumQuery.data === null
         ? 'Album introuvable.'
         : null);
-  const [uploadsInFlight, setUploadsInFlight] = useState(0);
+  const uploads = useAlbumUploads(albumId);
   const hasAskedPermission = useRef(false);
 
   useEffect(() => {
@@ -71,39 +73,14 @@ export function useSwipeSession(albumId: string) {
     };
   }, [periodKey, granted]);
 
-  /** Envoie une photo de la galerie vers l'album, en arrière-plan. */
-  /** Envoie une photo de la galerie vers l'album. Résout à vrai si l'envoi a réussi. */
-  const uploadOne = useCallback(async (albumId: string, photo: GalleryPhoto): Promise<boolean> => {
-    try {
-      const uploaded = await uploadPhoto({ albumId, photo });
-      // Cette photo vient de la galerie de ce téléphone : ne jamais la retélécharger.
-      markPhotoOnDevice(albumId, uploaded.id, photo.id);
-      return true;
-    } catch (error) {
-      // Déjà dans l'album (envoyée par quelqu'un d'autre, ou depuis un autre téléphone).
-      if (error instanceof DuplicatePhotoError) return true;
-      // TODO : file d'attente avec nouvelle tentative ; pour l'instant l'échec est perdu.
-      return false;
-    }
-  }, [uploadPhoto]);
-
-  /** Envoi en arrière-plan depuis le swipe : juste un spinner à côté du compteur. */
-  const upload = useCallback(
-    (albumId: string, photo: GalleryPhoto) => {
-      setUploadsInFlight((n) => n + 1);
-      uploadOne(albumId, photo).finally(() => setUploadsInFlight((n) => n - 1));
-    },
-    [uploadOne]
-  );
-
   const decide = useCallback(
     (photo: GalleryPhoto, decision: ReviewDecision) => {
       if (!album) return;
       saveReview(album.id, photo.id, decision);
       setCandidates((current) => current?.filter((p) => p.id !== photo.id) ?? null);
-      if (decision === 'sent') upload(album.id, photo);
+      if (decision === 'sent') enqueueUploads(album.id, [photo]);
     },
-    [album, upload]
+    [album]
   );
 
   /** Identifiants des photos de la galerie déjà envoyées dans cet album (swipe ou sélection). */
@@ -119,32 +96,22 @@ export function useSwipeSession(albumId: string) {
   }, [album, candidates]);
 
   /**
-   * Sélection manuelle : envoie les photos choisies une par une (sauf celles déjà dans
-   * l'album), en rapportant la progression, et les retire des candidates au swipe.
+   * Sélection manuelle : met en file les photos choisies (sauf celles déjà dans l'album) et
+   * les retire des candidates au swipe. L'envoi se poursuit en arrière-plan.
    */
   const sendMany = useCallback(
-    async (
-      photos: GalleryPhoto[],
-      onProgress?: (done: number, total: number) => void
-    ): Promise<{ sent: number; failed: number; skipped: number }> => {
-      if (!album) return { sent: 0, failed: 0, skipped: photos.length };
+    (photos: GalleryPhoto[]): { queued: number; skipped: number } => {
+      if (!album) return { queued: 0, skipped: photos.length };
       const fresh = photos.filter((p) => !sentIds.has(p.id));
-      const result = { sent: 0, failed: 0, skipped: photos.length - fresh.length };
-      if (fresh.length === 0) return result;
+      if (fresh.length === 0) return { queued: 0, skipped: photos.length };
 
       const ids = new Set(fresh.map((p) => p.id));
       setCandidates((current) => current?.filter((p) => !ids.has(p.id)) ?? null);
-      onProgress?.(0, fresh.length);
-      for (const photo of fresh) {
-        saveReview(album.id, photo.id, 'sent');
-        if (await uploadOne(album.id, photo)) result.sent += 1;
-        else result.failed += 1;
-        onProgress?.(result.sent + result.failed, fresh.length);
-      }
-      return result;
+      for (const photo of fresh) saveReview(album.id, photo.id, 'sent');
+      enqueueUploads(album.id, fresh);
+      return { queued: fresh.length, skipped: photos.length - fresh.length };
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [album, uploadOne, candidates]
+    [album, sentIds]
   );
 
   let status: SwipeSessionStatus = 'loading';
@@ -161,7 +128,8 @@ export function useSwipeSession(albumId: string) {
     decide,
     sendMany,
     sentIds,
-    uploadsInFlight,
+    /** Photos de cet album en attente ou en cours d'envoi. */
+    uploadsInFlight: uploads.active,
     /** Sur Android on peut redemander ; sur iOS il faut passer par les réglages. */
     canAskPermissionAgain: permission?.canAskAgain ?? false,
     requestPermission,

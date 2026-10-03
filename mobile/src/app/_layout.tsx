@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Palette } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
+import { useUploadQueueSync } from '@/hooks/use-upload-queue';
 import { QueryProvider } from '@/providers/query-provider';
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
@@ -23,11 +24,14 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+    // Télémétrie Clerk coupée : inutile pour nous, et son enregistrement plante par moments
+    // sous React Native (erreur attrapée par Clerk mais affichée en rouge en développement).
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} telemetry={false}>
       <GestureHandlerRootView style={styles.root}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AuthProvider>
             <QueryProvider>
+              <UploadQueueSync />
               <AnimatedSplashOverlay />
               <RootNavigator />
             </QueryProvider>
@@ -36,6 +40,12 @@ export default function RootLayout() {
       </GestureHandlerRootView>
     </ClerkProvider>
   );
+}
+
+/** Démarre la file d'envoi avec le compte et rafraîchit les albums quand une photo arrive. */
+function UploadQueueSync() {
+  useUploadQueueSync();
+  return null;
 }
 
 /**

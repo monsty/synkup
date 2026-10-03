@@ -71,6 +71,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       persister,
       maxAge: PERSIST_MAX_AGE_MS,
       buster: PERSIST_VERSION,
+      // Par défaut, seules les requêtes dont le dernier appel a réussi sont sauvegardées : un
+      // album consulté hors ligne (dernier appel en échec) disparaîtrait au prochain lancement.
+      dehydrateOptions: { shouldDehydrateQuery: (query) => query.state.data !== undefined },
     });
     return unsubscribe;
   }, [userId]);

@@ -18,7 +18,8 @@ import {
 } from '@/services/album-api';
 import { getCurrentUserId } from '@/services/auth-api';
 import { pruneAlbumThumbs, pruneAlbums } from '@/services/thumbnail-store';
-import type { Album, AlbumRole, GalleryPhoto } from '@/types/album';
+import { removeAlbumUploads } from '@/services/upload-queue';
+import type { Album, AlbumRole } from '@/types/album';
 
 export const albumKeys = {
   all: ['albums'] as const,
@@ -55,9 +56,10 @@ export function useAlbumQuery(albumId: string) {
   return useQuery({
     queryKey: albumKeys.detail(albumId),
     queryFn: () => albumApi.getAlbum(albumId),
-    // Venant de la liste, l'album s'affiche tout de suite, puis se rafraîchit.
-    placeholderData: () =>
-      client.getQueryData<Album[]>(albumKeys.list())?.find((a) => a.id === albumId),
+    // Venant de la liste, l'album s'affiche tout de suite (et reste affiché hors ligne),
+    // puis se rafraîchit selon l'âge de la liste.
+    initialData: () => client.getQueryData<Album[]>(albumKeys.list())?.find((a) => a.id === albumId),
+    initialDataUpdatedAt: () => client.getQueryState(albumKeys.list())?.dataUpdatedAt,
   });
 }
 
@@ -68,21 +70,6 @@ export function useAlbumPhotosQuery(albumId: string) {
       const photos = await albumApi.getPhotos(albumId);
       pruneAlbumThumbs(albumId, photos.map((p) => p.id));
       return photos;
-    },
-  });
-}
-
-/**
- * Photos actives comptées dans mon quota : celles des albums que j'ai créés. Dérivé de la
- * liste en cache, sans appel supplémentaire.
- */
-export function useMyUsage() {
-  return useQuery({
-    queryKey: albumKeys.list(),
-    queryFn: fetchAlbums,
-    select: (albums) => {
-      const owned = albums.filter((a) => a.myRole === 'owner');
-      return { photos: owned.reduce((sum, a) => sum + a.photoCount, 0), albums: owned.length };
     },
   });
 }
@@ -124,8 +111,23 @@ export function useDeleteAlbum() {
   return useMutation({
     mutationFn: (albumId: string) => albumApi.deleteAlbum(albumId),
     onSuccess: (_, albumId) => {
+      removeAlbumUploads(albumId);
       // Les écrans encore ouverts sur cet album (détail, gestion) gardent leurs données le
       // temps de se fermer : on ne retire que le cache que plus personne n'affiche.
+      client.removeQueries({ queryKey: albumKeys.detail(albumId), type: 'inactive' });
+      client.removeQueries({ queryKey: albumKeys.photos(albumId), type: 'inactive' });
+      return client.invalidateQueries({ queryKey: albumKeys.list() });
+    },
+  });
+}
+
+/** Quitter un album (membre) : il disparaît de ma liste, ses envois en attente aussi. */
+export function useLeaveAlbum() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (albumId: string) => albumApi.leaveAlbum(albumId),
+    onSuccess: (_, albumId) => {
+      removeAlbumUploads(albumId);
       client.removeQueries({ queryKey: albumKeys.detail(albumId), type: 'inactive' });
       client.removeQueries({ queryKey: albumKeys.photos(albumId), type: 'inactive' });
       return client.invalidateQueries({ queryKey: albumKeys.list() });
@@ -157,15 +159,6 @@ function invalidatePhotos(client: QueryClient, albumId: string) {
     client.invalidateQueries({ queryKey: albumKeys.detail(albumId) }),
     client.invalidateQueries({ queryKey: albumKeys.list() }),
   ]);
-}
-
-export function useUploadPhoto() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ albumId, photo }: { albumId: string; photo: GalleryPhoto }) =>
-      albumApi.uploadPhoto(albumId, photo),
-    onSuccess: (_, { albumId }) => invalidatePhotos(client, albumId),
-  });
 }
 
 export function useDeletePhotos(albumId: string) {

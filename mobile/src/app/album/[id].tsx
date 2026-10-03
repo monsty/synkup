@@ -1,7 +1,7 @@
 import { SymbolView } from 'expo-symbols';
 import { useLocalSearchParams } from 'expo-router';
 import { pushOnce } from '@/navigation/push-once';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -9,6 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProgressModal } from '@/components/progress-modal';
 import { ShareSheet } from '@/components/share-sheet';
+import { UploadBanner } from '@/components/upload-banner';
+import { acknowledgeUploads } from '@/services/upload-queue';
 import { ADD_BUTTON_SIZE, AddButton } from '@/components/add-button';
 import { AvatarStack } from '@/components/avatar-stack';
 import { PageLoader } from '@/components/page-loader';
@@ -33,6 +35,8 @@ export default function AlbumScreen() {
   // La clé change à chaque ouverture pour repartir d'une instance neuve, même si on rouvre
   // pendant le fondu de sortie de la précédente.
   const [viewer, setViewer] = useState<{ index: number; key: number } | null>(null);
+  // En quittant l'album (retour à la liste), le bandeau « N photos envoyées » repart de zéro.
+  useEffect(() => () => acknowledgeUploads(albumId), [albumId]);
   // Filet sous l'en-tête collant dès que la grille a défilé.
   const [scrolled, setScrolled] = useState(false);
   // Feuille de partage en calque ; clé unique par ouverture (voir BottomSheet).
@@ -227,6 +231,8 @@ export default function AlbumScreen() {
           </View>
         </View>
       )}
+      {/* Photos en route vers l'album (file d'arrière-plan) : avancement, puis échecs éventuels. */}
+      <UploadBanner albumId={albumId} />
       {/* En sélection : bandeau qui explique ce qui a été pré-coché, avec tout / rien. */}
       {(selecting || managing) && (
         <Animated.View entering={FadeIn.duration(200)} style={styles.bannerWrap}>

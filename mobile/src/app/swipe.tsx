@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { SymbolView } from 'expo-symbols';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,7 @@ import {
 } from '@/components/screen-header';
 import { SwipeDeck } from '@/components/swipe-deck';
 import { Fonts, Spacing, Palette } from '@/constants/theme';
-import { describeBatch, useProgressOverlay } from '@/hooks/use-progress-overlay';
+import { useProgressOverlay } from '@/hooks/use-progress-overlay';
 import { useSwipeSession } from '@/hooks/use-swipe-session';
 import { pickPhotosFromGallery } from '@/services/photo-picker';
 import { formatAlbumRange } from '@/types/album';
@@ -35,36 +35,31 @@ export default function SwipeScreen() {
   } = useSwipeSession(albumId);
 
   // Ouvert via deep link, l'écran peut être seul dans la pile : on retombe alors sur l'album.
+  // Une seule fermeture, même si ✕ et la fin d'une sélection manuelle s'enchaînent.
+  const closed = useRef(false);
   const close = () => {
+    if (closed.current) return;
+    closed.current = true;
     if (router.canGoBack()) router.back();
     else router.replace('/');
   };
 
   const remaining = candidates.length;
 
-  // Sélection manuelle dans la galerie, via le sélecteur natif du système, puis envoi
-  // suivi dans la même modale de progression que l'enregistrement sur le téléphone.
+  // Sélection manuelle dans la galerie, via le sélecteur natif du système. Les photos partent
+  // dans la file d'arrière-plan : on revient aussitôt à l'album, dont le bandeau montre
+  // l'avancement. La modale ne sert qu'à dire qu'il n'y avait rien à envoyer.
   const [picking, setPicking] = useState(false);
-  const { overlay, progress, finish } = useProgressOverlay();
+  const { overlay, finish } = useProgressOverlay();
   const pickFromGallery = async () => {
     if (picking) return;
     setPicking(true);
     try {
       const chosen = await pickPhotosFromGallery();
       if (chosen.length === 0) return;
-      progress('Envoi', 0, chosen.length);
-      const result = await sendMany(chosen, (done, total) => progress('Envoi', done, total));
-      await finish(
-        describeBatch(
-          result.sent,
-          result.failed,
-          'envoyée',
-          result.skipped > 0 ? 'Déjà dans l’album' : 'Rien à envoyer'
-        ),
-        result.sent === 0 && result.failed > 0
-      );
-      // Des photos sont parties : le tri a rempli son rôle, on revient à l'album les voir.
-      if (result.sent > 0) close();
+      const { queued } = sendMany(chosen);
+      if (queued > 0) close();
+      else await finish('Déjà dans l’album');
     } finally {
       setPicking(false);
     }

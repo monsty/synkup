@@ -31,6 +31,14 @@ export function saveReview(albumId: string, assetId: string, decision: ReviewDec
   Storage.setItemSync(storageKey(albumId), JSON.stringify(reviews));
 }
 
+/** Oublie une décision : la photo sera de nouveau proposée au tri (envoi abandonné). */
+export function removeReview(albumId: string, assetId: string): void {
+  const reviews = getReviews(albumId);
+  if (!(assetId in reviews)) return;
+  delete reviews[assetId];
+  Storage.setItemSync(storageKey(albumId), JSON.stringify(reviews));
+}
+
 /** Utile en dev pour re-tester le swipe depuis zéro. */
 export function clearReviews(albumId: string): void {
   Storage.removeItemSync(storageKey(albumId));

@@ -63,6 +63,7 @@ ancienne version des mois, un changement incompatible passera par `/v2`.
 | `GET`    | `/albums/:id`                       | membre        |
 | `PATCH`  | `/albums/:id` (nom, période, cover) | propriétaire  |
 | `DELETE` | `/albums/:id`                       | propriétaire  |
+| `POST`   | `/albums/:id/leave`                 | membre (pas le propriétaire) |
 | `PATCH`  | `/albums/:id/members/:memberId`     | propriétaire  |
 | `DELETE` | `/albums/:id/members/:memberId`     | propriétaire  |
 | `POST`   | `/albums/:id/cover`                 | propriétaire  |
@@ -70,12 +71,27 @@ ancienne version des mois, un changement incompatible passera par `/v2`.
 | `POST`   | `/albums/:id/photos/uploads`        | membre        |
 | `POST`   | `/albums/:id/photos`                | membre        |
 | `POST`   | `/albums/:id/photos/delete`         | auteur ou propriétaire |
+| `GET`    | `/me`                               | connecté      |
+| `PATCH`  | `/me` (surnom, photo de profil)     | connecté      |
+| `POST`   | `/me/avatar`                        | connecté      |
+| `DELETE` | `/me`                               | connecté      |
 | `GET`    | `/albums/:id/invite`                | membre        |
 | `POST`   | `/albums/:id/invite/reset`          | propriétaire  |
 | `GET`    | `/invites/:token`                   | connecté      |
 | `POST`   | `/invites/:token/accept`            | connecté      |
 
 Un album dont on n'est pas membre répond 404, pour ne rien révéler.
+
+## Mon compte
+
+`GET /me` renvoie le profil, l'offre et l'usage du quota (même calcul que celui appliqué à
+l'envoi). La photo de profil suit le circuit des couvertures (URL signée, `users/<id>/avatar/`)
+et remplace celle de Clerk. L'email est géré par Clerk et ne se modifie pas ici.
+
+`DELETE /me` supprime définitivement : les albums dont l'utilisateur est propriétaire (avec
+toutes leurs photos, y compris celles des autres membres), ses photos dans les autres albums,
+ses appartenances, sa photo de profil et ses fichiers, puis son compte Clerk. Les appels à
+Clerk passent par `ClerkService`, remplacé par un faux dans les tests.
 
 ## Invitations
 

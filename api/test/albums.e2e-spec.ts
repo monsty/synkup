@@ -3,6 +3,7 @@ import {
   createTestApp,
   PERIOD,
   resetDatabase,
+  uploadPhoto,
   type TestApp,
 } from './helpers.js';
 
@@ -189,6 +190,28 @@ describe('Albums', () => {
       const id = await albumWith(t, 'alice', ['bob']);
       await t.as('alice').delete(`/albums/${id}/members/bob`).expect(200);
       await t.as('bob').get(`/albums/${id}`).expect(404);
+    });
+
+    it('laisse un membre quitter l’album, ses photos y restent', async () => {
+      const id = await albumWith(t, 'alice', ['bob']);
+      const photo = await uploadPhoto(t, 'bob', id);
+      await t.as('bob').post(`/albums/${id}/leave`).expect(204);
+      await t.as('bob').get(`/albums/${id}`).expect(404);
+      const album = await t.as('alice').get(`/albums/${id}`).expect(200);
+      expect(album.body.members.map((m: { id: string }) => m.id)).toEqual([
+        'alice',
+      ]);
+      const photos = await t
+        .as('alice')
+        .get(`/albums/${id}/photos`)
+        .expect(200);
+      expect(photos.body.map((p: { id: string }) => p.id)).toEqual([photo.id]);
+    });
+
+    it('interdit au propriétaire de quitter l’album, et à un non-membre d’essayer', async () => {
+      const id = await albumWith(t, 'alice');
+      await t.as('alice').post(`/albums/${id}/leave`).expect(400);
+      await t.as('mallory').post(`/albums/${id}/leave`).expect(404);
     });
 
     it('interdit au propriétaire de se retirer', async () => {

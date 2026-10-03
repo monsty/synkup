@@ -1,5 +1,5 @@
 import { SymbolView } from 'expo-symbols';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   ActionSheetIOS,
@@ -19,7 +19,12 @@ import { PageLoader } from '@/components/page-loader';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { ShareSheet } from '@/components/share-sheet';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
-import { useAlbumQuery, useRemoveMember, useUpdateMemberRole } from '@/queries/albums';
+import {
+  useAlbumQuery,
+  useLeaveAlbum,
+  useRemoveMember,
+  useUpdateMemberRole,
+} from '@/queries/albums';
 import { getCurrentUserId } from '@/services/auth-api';
 import {
   assignableRoles,
@@ -36,6 +41,28 @@ export default function MembersScreen() {
   const status = album ? 'ready' : isPending && !isError ? 'loading' : 'error';
   const updateRole = useUpdateMemberRole(albumId);
   const removeMember = useRemoveMember(albumId);
+  const leaveAlbum = useLeaveAlbum();
+
+  const confirmLeave = () => {
+    if (!album) return;
+    Alert.alert(
+      `Quitter « ${album.name} » ?`,
+      "Tu n'auras plus accès à ses photos. Celles que tu y as envoyées y restent.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: "Quitter l'album",
+          style: 'destructive',
+          onPress: () =>
+            leaveAlbum.mutate(albumId, {
+              // Retour à la liste des albums, l'album n'y est plus.
+              onSuccess: () => router.dismissAll(),
+              onError: () => Alert.alert('Oups', "Impossible de quitter l'album pour l'instant."),
+            }),
+        },
+      ]
+    );
+  };
   const [scrolled, setScrolled] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [shareKey, setShareKey] = useState<number | null>(null);
@@ -223,6 +250,22 @@ export default function MembersScreen() {
               />
               <Text style={styles.inviteLabel}>Inviter quelqu&apos;un</Text>
             </Pressable>
+
+            {/* Quitter : réservé aux membres (le propriétaire transfère ou supprime), en retrait. */}
+            {!isOwner && (
+              <Pressable
+                accessibilityRole="button"
+                disabled={leaveAlbum.isPending}
+                onPress={confirmLeave}
+                hitSlop={8}
+                style={({ pressed }) => [styles.leaveLink, pressed && styles.pressed]}>
+                {leaveAlbum.isPending ? (
+                  <ActivityIndicator size="small" color={Palette.textMuted} />
+                ) : (
+                  <Text style={styles.leaveText}>Quitter l&apos;album</Text>
+                )}
+              </Pressable>
+            )}
           </>
         )}
       </ScrollView>
@@ -238,6 +281,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Palette.background,
+  },
+  leaveLink: {
+    alignSelf: 'center',
+    paddingVertical: Spacing.two,
+  },
+  leaveText: {
+    color: Palette.textMuted,
+    fontFamily: Fonts.rounded,
+    fontSize: 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   content: {
     paddingHorizontal: Spacing.three,
