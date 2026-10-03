@@ -17,10 +17,15 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import {
+  HEADER_ROW_HEIGHT,
+  HEADER_ROW_PADDING_BOTTOM,
+  HEADER_ROW_PADDING_TOP,
+} from '@/components/screen-header';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 import { formatPhotoDate, type AlbumPhoto } from '@/types/album';
 
-const HEADER_HEIGHT = 40 + Spacing.two;
+const HEADER_HEIGHT = HEADER_ROW_HEIGHT;
 const CAPTION_HEIGHT = 40 + Spacing.three;
 
 /** Fondu d'ouverture et de fermeture du calque : court, pour rester réactif. */
@@ -309,11 +314,13 @@ const styles = StyleSheet.create({
   frost: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
+  // Même géométrie que ScreenHeader, pour que ✕ et marque tombent au même endroit.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
+    paddingTop: HEADER_ROW_PADDING_TOP,
+    paddingBottom: HEADER_ROW_PADDING_BOTTOM,
     gap: Spacing.three,
     height: HEADER_HEIGHT,
   },

@@ -8,6 +8,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedCounter } from '@/components/animated-counter';
 import { ProgressModal } from '@/components/progress-modal';
+import {
+  HEADER_ROW_HEIGHT,
+  HEADER_ROW_PADDING_BOTTOM,
+  HEADER_ROW_PADDING_TOP,
+} from '@/components/screen-header';
 import { SwipeDeck } from '@/components/swipe-deck';
 import { Fonts, Spacing, Palette } from '@/constants/theme';
 import { describeBatch, useProgressOverlay } from '@/hooks/use-progress-overlay';
@@ -222,11 +227,14 @@ const styles = StyleSheet.create({
   frost: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
+  // Même géométrie que ScreenHeader, pour que ✕ et marque tombent au même endroit.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.two,
+    paddingTop: HEADER_ROW_PADDING_TOP,
+    paddingBottom: HEADER_ROW_PADDING_BOTTOM,
+    height: HEADER_ROW_HEIGHT,
     gap: Spacing.three,
   },
   closeButton: {

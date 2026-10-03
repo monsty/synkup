@@ -44,14 +44,7 @@ export function DateField({ label, value, onChange, minimumDate }: Props) {
       <Text style={styles.label}>{label}</Text>
       {Platform.OS === 'ios' ? (
         <View style={styles.frame}>
-          <SymbolView
-            name={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
-            size={18}
-            weight="bold"
-            tintColor={Palette.pink}
-            fallback={<Text style={styles.iconFallback}>▦</Text>}
-          />
-          <Text style={styles.value}>{format(value)}</Text>
+          {/* Sélecteur compact natif, quasi invisible mais touchable, étiré sur toute la carte. */}
           <DateTimePicker
             // Remonté à chaque changement de valeur : le popover se referme après le choix.
             key={value.getTime()}
@@ -66,6 +59,17 @@ export function DateField({ label, value, onChange, minimumDate }: Props) {
             }}
             style={styles.picker}
           />
+          {/* Calque opaque par-dessus : masque l'étiquette native, laisse passer les touches. */}
+          <View pointerEvents="none" style={styles.cover}>
+            <SymbolView
+              name={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }}
+              size={18}
+              weight="bold"
+              tintColor={Palette.pink}
+              fallback={<Text style={styles.iconFallback}>▦</Text>}
+            />
+            <Text style={styles.value}>{format(value)}</Text>
+          </View>
         </View>
       ) : (
         <Pressable
@@ -124,9 +128,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   /**
-   * Le sélecteur compact iOS est invisible et étiré pour couvrir toute la carte : sa zone
-   * tactile native est celle de sa petite étiquette, on l'agrandit donc par transformation,
-   * et `overflow: hidden` sur la carte borne les touches à la cellule.
+   * Le sélecteur compact iOS est étiré pour couvrir toute la carte : sa zone tactile native
+   * est celle de sa petite étiquette, on l'agrandit donc par transformation. Opacité quasi
+   * nulle mais pas zéro : iOS ne délivre plus les touches sous 1 % d'opacité. Le calque
+   * opaque au-dessus cache ce qui transparaît, et `overflow: hidden` borne les touches.
    */
   picker: {
     position: 'absolute',
@@ -136,6 +141,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     opacity: 0.011,
     transform: [{ scaleX: 4 }, { scaleY: 2.5 }],
+  },
+  cover: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    backgroundColor: Palette.card,
   },
   iconFallback: {
     color: Palette.pink,

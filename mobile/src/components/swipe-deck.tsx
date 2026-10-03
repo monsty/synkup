@@ -198,14 +198,13 @@ export function SwipeDeck({ photos, onDecide }: SwipeDeckProps) {
           accessibilityLabel="Envoyer cette photo dans l'album"
           onPress={() => topCardRef.current?.swipe('sent')}
           style={({ pressed }) => [styles.sendButton, pressed && styles.pressed]}>
-          <Text style={styles.sendLabel}>Envoyer</Text>
           <SymbolView
             name={{
               ios: 'icloud.and.arrow.up',
               android: 'cloud_upload',
               web: 'cloud_upload',
             }}
-            size={26}
+            size={30}
             weight="semibold"
             tintColor={Palette.onPhoto}
             fallback={<Text style={styles.sendFallback}>↑</Text>}
@@ -303,22 +302,19 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '900',
   },
+  /** Rond rose, un peu plus grand que « passer » : l'action principale, icône seule. */
   sendButton: {
-    flexDirection: 'row',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Palette.pink,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.two,
-    height: 64,
-    minWidth: 190,
-    paddingHorizontal: Spacing.five,
-    borderRadius: 32,
-    backgroundColor: Palette.pink,
-  },
-  sendLabel: {
-    color: Palette.onPhoto,
-    fontFamily: Fonts.rounded,
-    fontSize: 22,
-    fontWeight: '800',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
   sendFallback: {
     color: Palette.onPhoto,

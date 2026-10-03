@@ -4,7 +4,6 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -47,14 +46,12 @@ export default function AlbumsScreen() {
       onPress={() => setMenuKey((k) => (k ?? 0) + 1)}
       hitSlop={8}
       style={({ pressed }) => [styles.menuButton, pressed && styles.pressed]}>
-      {/* SF Symbols n'a pas de points verticaux : on tourne la version horizontale. */}
       <SymbolView
-        name={{ ios: 'ellipsis', android: 'more_vert', web: 'more_vert' }}
+        name={{ ios: 'person.fill', android: 'person', web: 'person' }}
         size={20}
-        weight="heavy"
+        weight="bold"
         tintColor={Palette.text}
-        style={Platform.OS === 'ios' ? styles.menuIconVertical : undefined}
-        fallback={<Text style={styles.menuFallback}>⋮</Text>}
+        fallback={<Text style={styles.menuFallback}>☺</Text>}
       />
     </Pressable>
   );
@@ -152,9 +149,6 @@ const styles = StyleSheet.create({
     backgroundColor: Palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  menuIconVertical: {
-    transform: [{ rotate: '90deg' }],
   },
   menuFallback: {
     color: Palette.text,

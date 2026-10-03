@@ -7,8 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
 
 /** Bouton de 40, un peu d'air au-dessus et davantage en dessous pour ne pas coller au filet. */
-const ROW_PADDING_TOP = Spacing.one;
-const ROW_PADDING_BOTTOM = Spacing.two + Spacing.half;
+export const HEADER_ROW_PADDING_TOP = Spacing.one;
+export const HEADER_ROW_PADDING_BOTTOM = Spacing.two + Spacing.half;
+const ROW_PADDING_TOP = HEADER_ROW_PADDING_TOP;
+const ROW_PADDING_BOTTOM = HEADER_ROW_PADDING_BOTTOM;
 export const HEADER_ROW_HEIGHT = 40 + ROW_PADDING_TOP + ROW_PADDING_BOTTOM;
 
 type Props = {
@@ -81,9 +83,10 @@ export function BackButton({
 export const HEADER_SCROLL_THRESHOLD = 4;
 
 const styles = StyleSheet.create({
+  // Pas de zIndex : les calques (visualiseur, feuilles, modales) rendus après doivent
+  // passer au-dessus de l'en-tête.
   container: {
     backgroundColor: Palette.background,
-    zIndex: 1,
   },
   row: {
     flexDirection: 'row',

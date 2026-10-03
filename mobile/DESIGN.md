@@ -56,7 +56,8 @@ hors de la liste, fond `background` opaque couvrant la barre de statut, et un fi
 `surfaceStrong` qui apparaît en 150 ms dès que le contenu a défilé de 4 pt ; le titre et le
 sous-titre, eux, défilent avec le contenu. `centered` centre la marque entre deux emplacements
 de 40 (connexion). Le tri et le visualiseur, calques dépolis fermés par ✕, ont leur propre
-rangée. L'étiquette d'info (« 12 photos », « 15 à trier », « 3 / 32 ») n'a pas de fond : seul
+rangée mais la même géométrie (4 au-dessus, 10 en dessous, hauteur 54) pour que ✕ et marque
+tombent exactement au même endroit que sur les autres écrans. L'étiquette d'info (« 12 photos », « 15 à trier », « 3 / 32 ») n'a pas de fond : seul
 ce qui est cliquable porte le rond gris, pour qu'on ne confonde jamais les deux. Un écran enfant ajoute un rond gris à gauche de la marque : ✕ pour une modale,
 chevron gauche pour un écran empilé (album). Sous la rangée, un titre centré en gras (26) et
 un sous-titre centré en muted. Un bouton d'action secondaire se place à droite de la pilule :
@@ -74,7 +75,7 @@ rose à la place de l'icône pendant l'action.
   « Me connecter », lien rose « Renvoyer le code ». Chevron retour à gauche de la marque sur
   les étapes 2 et 3. Pas de mot de passe : connexion par code, Apple ou Google uniquement.
 - Mes albums (accueil) : bouton + flottant (`AddButton`, Liquid Glass) pour créer un album ;
-  marque + bouton menu rond gris (trois points verticaux : `ellipsis` tourné de 90° / `more_vert`) à
+  marque + bouton menu rond gris avec une icône utilisateur (`person.fill` / `person`) à
   droite, titre « Mes albums », sous-titre « N albums partagés avec toi ». Une carte par ligne
   (`AlbumCard`) : fond `card` blanc, arrondi 40, ombre légère (opacité 0,08, rayon 16).
   Couverture 16:10 avec deux pilules sombres translucides en haut : l'état à gauche (« En
@@ -186,8 +187,8 @@ rose à la place de l'icône pendant l'action.
   « Tout est trié »).
   Modale transparente en fondu, `BlurView` clair (intensité 70) + voile blanc
   à 30 % par-dessus l'album. Carte plein cadre arrondie 40 avec la date de la photo en pilule
-  sombre centrée en bas. Actions : rond gris ✕ rose, puis pilule rose « Envoyer » avec
-  icône nuage-flèche blanche. Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
+  sombre centrée en bas. Actions : rond gris 64 ✕ rose, puis rond rose 72 avec ombre et
+  l'icône nuage-flèche blanche seule (pas de libellé). Tampons de swipe : ENVOYER rose, PASSER `text` sombre, texte blanc. Pas de texte d'aide sous les actions. La pilule « à trier » n'apparaît
   qu'une fois le nombre connu.
 - Visualiseur photo : calque rendu par-dessus l'album (pas une route : ouverture et fermeture
   sont un changement d'état, fondu 120 ms, pour ne jamais bloquer les touches). Même fond dépoli. En-tête ✕ + marque + étiquette « 3 / 32 ». Photo dans une
