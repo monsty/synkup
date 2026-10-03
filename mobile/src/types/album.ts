@@ -40,6 +40,8 @@ export type Album = {
   endDate: string;
   /** Photo de couverture (en général la dernière ajoutée). */
   coverUri: string | null;
+  /** Clé stable pour le cache d'images : l'URL signée de la couverture change. */
+  coverCacheKey: string | null;
   /** Vrai si la couverture a été choisie à la main (sinon c'est la dernière photo). */
   hasCustomCover: boolean;
   members: AlbumMember[];
@@ -109,11 +111,17 @@ export function describeAlbumStatus(album: Album, now = new Date()): string {
 /** Une photo déjà présente dans l'album partagé. */
 export type AlbumPhoto = {
   id: string;
+  /** Version d'affichage (plein écran), ~1 600 px. */
   uri: string;
+  /** Miniature pour la grille, ~480 px. */
+  thumbUri: string;
+  /** Originale, pour le téléchargement. */
+  originalUri: string;
   width: number;
   height: number;
   /** ISO 8601 */
   takenAt: string;
+  authorId: string;
   authorName: string;
 };
 

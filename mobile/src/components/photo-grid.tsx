@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import { Palette, Radii, Spacing } from '@/constants/theme';
+import { useExpiredUrlRetry } from '@/hooks/use-expired-url-retry';
 import type { AlbumPhoto } from '@/types/album';
 
 const COLUMNS = 3;
@@ -54,6 +55,7 @@ export function PhotoGrid({
   ListEmptyComponent,
 }: Props) {
   const { width } = useWindowDimensions();
+  const retryExpired = useExpiredUrlRetry('photos');
   const tileSize = (width - SIDE_PADDING * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
 
   return (
@@ -96,7 +98,8 @@ export function PhotoGrid({
               pressed && styles.tilePressed,
             ]}>
             <Image
-              source={{ uri: item.uri }}
+              source={{ uri: item.thumbUri, cacheKey: `${item.id}:thumb` }}
+              onError={retryExpired}
               recyclingKey={item.id}
               contentFit="cover"
               transition={150}

@@ -15,10 +15,9 @@ import {
   albumApi,
   type CreateAlbumInput,
   type UpdateAlbumInput,
-  type UploadPhotoInput,
 } from '@/services/album-api';
 import { getCurrentUserId } from '@/services/auth-api';
-import type { Album, AlbumRole } from '@/types/album';
+import type { Album, AlbumRole, GalleryPhoto } from '@/types/album';
 
 export const albumKeys = {
   all: ['albums'] as const,
@@ -146,8 +145,8 @@ function invalidatePhotos(client: QueryClient, albumId: string) {
 export function useUploadPhoto() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ albumId, input }: { albumId: string; input: UploadPhotoInput }) =>
-      albumApi.uploadPhoto(albumId, input),
+    mutationFn: ({ albumId, photo }: { albumId: string; photo: GalleryPhoto }) =>
+      albumApi.uploadPhoto(albumId, photo),
     onSuccess: (_, { albumId }) => invalidatePhotos(client, albumId),
   });
 }

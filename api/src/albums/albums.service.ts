@@ -5,22 +5,36 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { randomUUID } from 'node:crypto';
+
 import { AlbumRole } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import type { CreateAlbumDto, UpdateAlbumDto } from './albums.dto.js';
+import { albumPrefix, coverPrefix } from './media-keys.js';
 
 const ALBUM_INCLUDE = {
   members: { include: { user: true }, orderBy: { joinedAt: 'asc' } },
   _count: { select: { photos: true } },
-  photos: { orderBy: { takenAt: 'desc' }, take: 1, select: { storageKey: true } },
+  photos: {
+    orderBy: { takenAt: 'desc' },
+    take: 1,
+    select: { displayKey: true },
+  },
 } as const;
 
 /** Rôles au format de l'app (minuscules). */
-const ROLE = { [AlbumRole.OWNER]: 'owner', [AlbumRole.MEMBER]: 'member' } as const;
+const ROLE = {
+  [AlbumRole.OWNER]: 'owner',
+  [AlbumRole.MEMBER]: 'member',
+} as const;
 
 @Injectable()
 export class AlbumsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   /**
    * Albums de l'utilisateur, avec membres, nombre de photos et couverture.
@@ -38,7 +52,7 @@ export class AlbumsService {
   }
 
   async getForUser(albumId: string, userId: string) {
-    await this.roleOf(albumId, userId);
+    await this.memberRole(albumId, userId);
     const [album] = await this.load([albumId], userId);
     return album;
   }
@@ -59,32 +73,72 @@ export class AlbumsService {
 
   async update(albumId: string, userId: string, input: UpdateAlbumDto) {
     await this.assertOwner(albumId, userId);
-    const current = await this.prisma.album.findUniqueOrThrow({ where: { id: albumId } });
-    assertPeriod(input.startDate ?? current.startDate, input.endDate ?? current.endDate);
+    const current = await this.prisma.album.findUniqueOrThrow({
+      where: { id: albumId },
+    });
+    assertPeriod(
+      input.startDate ?? current.startDate,
+      input.endDate ?? current.endDate,
+    );
+    if (input.coverKey) await this.assertCoverUploaded(albumId, input.coverKey);
     await this.prisma.album.update({
       where: { id: albumId },
       data: {
         name: input.name?.trim(),
         startDate: input.startDate,
         endDate: input.endDate,
-        coverUrl: input.coverUrl,
+        coverKey: input.coverKey,
       },
     });
+    // L'ancienne couverture n'est plus référencée nulle part.
+    if (
+      input.coverKey !== undefined &&
+      current.coverKey &&
+      current.coverKey !== input.coverKey
+    ) {
+      await this.storage.delete([current.coverKey]);
+    }
     return this.getForUser(albumId, userId);
   }
 
-  /** Supprime l'album, ses membres, photos et invitations (cascade). */
+  /** Supprime l'album, ses membres, photos et invitations (cascade), puis ses fichiers. */
   async remove(albumId: string, userId: string) {
     await this.assertOwner(albumId, userId);
     await this.prisma.album.delete({ where: { id: albumId } });
+    await this.storage.deletePrefix(albumPrefix(albumId));
+  }
+
+  /** URL d'envoi d'une couverture choisie à la main ; à confirmer ensuite par `update`. */
+  async coverUpload(albumId: string, userId: string) {
+    await this.assertOwner(albumId, userId);
+    const key = `${coverPrefix(albumId)}${randomUUID()}.jpg`;
+    return { key, uploadUrl: await this.storage.uploadUrl(key, 'image/jpeg') };
+  }
+
+  private async assertCoverUploaded(albumId: string, key: string) {
+    if (
+      !key.startsWith(coverPrefix(albumId)) ||
+      (await this.storage.size(key)) === null
+    ) {
+      throw new BadRequestException(
+        "Couverture introuvable : l'envoi n'est pas terminé.",
+      );
+    }
   }
 
   /** Nommer un nouveau propriétaire rétrograde l'ancien en membre. */
-  async updateMemberRole(albumId: string, userId: string, memberId: string, role: 'owner' | 'member') {
+  async updateMemberRole(
+    albumId: string,
+    userId: string,
+    memberId: string,
+    role: 'owner' | 'member',
+  ) {
     await this.assertOwner(albumId, userId);
-    await this.roleOf(albumId, memberId);
+    await this.memberRole(albumId, memberId);
     if (role === 'member') {
-      throw new BadRequestException("Pour changer de propriétaire, nomme un autre membre propriétaire.");
+      throw new BadRequestException(
+        'Pour changer de propriétaire, nomme un autre membre propriétaire.',
+      );
     }
     await this.prisma.$transaction([
       this.prisma.albumMember.updateMany({
@@ -102,14 +156,17 @@ export class AlbumsService {
   /** Le propriétaire retire un membre ; jamais lui-même. */
   async removeMember(albumId: string, userId: string, memberId: string) {
     await this.assertOwner(albumId, userId);
-    if (memberId === userId) throw new BadRequestException('Le propriétaire ne peut pas se retirer.');
-    await this.roleOf(albumId, memberId);
-    await this.prisma.albumMember.delete({ where: { albumId_userId: { albumId, userId: memberId } } });
+    if (memberId === userId)
+      throw new BadRequestException('Le propriétaire ne peut pas se retirer.');
+    await this.memberRole(albumId, memberId);
+    await this.prisma.albumMember.delete({
+      where: { albumId_userId: { albumId, userId: memberId } },
+    });
     return this.getForUser(albumId, userId);
   }
 
   /** Rôle de l'utilisateur dans l'album ; 404 s'il n'en est pas membre (on ne révèle rien). */
-  private async roleOf(albumId: string, userId: string): Promise<AlbumRole> {
+  async memberRole(albumId: string, userId: string): Promise<AlbumRole> {
     const member = await this.prisma.albumMember.findUnique({
       where: { albumId_userId: { albumId, userId } },
       select: { role: true },
@@ -118,9 +175,11 @@ export class AlbumsService {
     return member.role;
   }
 
-  private async assertOwner(albumId: string, userId: string) {
-    if ((await this.roleOf(albumId, userId)) !== AlbumRole.OWNER) {
-      throw new ForbiddenException("Seul le propriétaire peut modifier l'album.");
+  async assertOwner(albumId: string, userId: string) {
+    if ((await this.memberRole(albumId, userId)) !== AlbumRole.OWNER) {
+      throw new ForbiddenException(
+        "Seul le propriétaire peut modifier l'album.",
+      );
     }
   }
 
@@ -128,7 +187,10 @@ export class AlbumsService {
   private async load(albumIds: string[], userId: string) {
     if (albumIds.length === 0) return [];
     const [albums, counts] = await Promise.all([
-      this.prisma.album.findMany({ where: { id: { in: albumIds } }, include: ALBUM_INCLUDE }),
+      this.prisma.album.findMany({
+        where: { id: { in: albumIds } },
+        include: ALBUM_INCLUDE,
+      }),
       this.prisma.photo.groupBy({
         by: ['albumId', 'authorId'],
         where: { albumId: { in: albumIds } },
@@ -136,28 +198,41 @@ export class AlbumsService {
       }),
     ]);
     const photoCount = (albumId: string, authorId: string) =>
-      counts.find((c) => c.albumId === albumId && c.authorId === authorId)?._count._all ?? 0;
+      counts.find((c) => c.albumId === albumId && c.authorId === authorId)
+        ?._count._all ?? 0;
 
-    return albums.map((album) => ({
-      id: album.id,
-      name: album.name,
-      startDate: album.startDate,
-      endDate: album.endDate,
-      coverUrl: album.coverUrl ?? album.photos[0]?.storageKey ?? null,
-      hasCustomCover: album.coverUrl !== null,
-      photoCount: album._count.photos,
-      myRole: ROLE[album.members.find((m) => m.userId === userId)?.role ?? AlbumRole.MEMBER],
-      members: album.members.map((m) => ({
-        id: m.user.id,
-        name: m.user.nickname,
-        avatarUrl: m.user.avatarUrl,
-        role: ROLE[m.role],
-        photoCount: photoCount(album.id, m.user.id),
-      })),
-    }));
+    return Promise.all(
+      albums.map(async (album) => {
+        const coverKey = album.coverKey ?? album.photos[0]?.displayKey ?? null;
+        return {
+          id: album.id,
+          name: album.name,
+          startDate: album.startDate,
+          endDate: album.endDate,
+          coverUrl: coverKey ? await this.storage.readUrl(coverKey) : null,
+          /** Clé stable pour le cache d'images de l'app : l'URL signée, elle, change. */
+          coverCacheKey: coverKey,
+          hasCustomCover: album.coverKey !== null,
+          photoCount: album._count.photos,
+          myRole:
+            ROLE[
+              album.members.find((m) => m.userId === userId)?.role ??
+                AlbumRole.MEMBER
+            ],
+          members: album.members.map((m) => ({
+            id: m.user.id,
+            name: m.user.nickname,
+            avatarUrl: m.user.avatarUrl,
+            role: ROLE[m.role],
+            photoCount: photoCount(album.id, m.user.id),
+          })),
+        };
+      }),
+    );
   }
 }
 
 function assertPeriod(startDate: string, endDate: string) {
-  if (endDate < startDate) throw new BadRequestException('La fin doit suivre le début.');
+  if (endDate < startDate)
+    throw new BadRequestException('La fin doit suivre le début.');
 }

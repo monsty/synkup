@@ -24,11 +24,6 @@ async function ensurePermission(): Promise<void> {
   if (!permission.granted) throw new PhotoPermissionError();
 }
 
-/** Une URI qui pointe déjà dans la galerie du téléphone (photo envoyée depuis cet appareil). */
-function isLocalGalleryUri(uri: string): boolean {
-  return uri.startsWith('ph://') || uri.startsWith('content://') || uri.startsWith('file://');
-}
-
 /**
  * Les photos de l'album déjà présentes sur ce téléphone d'après le registre : celles
  * envoyées depuis cet appareil et celles déjà téléchargées. On ne vérifie pas que l'asset
@@ -39,16 +34,22 @@ export function getPhotosOnDevice(albumId: string, photos: AlbumPhoto[]): Set<st
   const registry = getDevicePhotos(albumId);
   const onDevice = new Set<string>();
   for (const photo of photos) {
-    if (registry[photo.id] || isLocalGalleryUri(photo.uri)) onDevice.add(photo.id);
+    if (registry[photo.id]) onDevice.add(photo.id);
   }
   return onDevice;
 }
 
+/** Extension de l'originale d'après son URL (`…/original.heic?X-Amz-…`). */
+function extensionOf(url: string): string {
+  return /\.([a-z0-9]+)(?:\?|$)/i.exec(url)?.[1] ?? 'jpg';
+}
+
 async function saveRemotePhoto(photo: AlbumPhoto): Promise<string> {
-  const file = new File(Paths.cache, `synkup-${photo.id}.jpg`);
+  // L'originale, dans son format (HEIC compris) : c'est elle qu'on veut dans la galerie.
+  const file = new File(Paths.cache, `synkup-${photo.id}.${extensionOf(photo.originalUri)}`);
   try {
     if (file.exists) file.delete();
-    const downloaded = await File.downloadFileAsync(photo.uri, file);
+    const downloaded = await File.downloadFileAsync(photo.originalUri, file);
     const asset = await Asset.create(downloaded.uri);
     return asset.id;
   } finally {

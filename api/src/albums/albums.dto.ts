@@ -1,4 +1,11 @@
-import { IsIn, IsOptional, IsString, Length, Matches, ValidateIf } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_MESSAGE = 'Date attendue au format AAAA-MM-JJ.';
@@ -29,10 +36,10 @@ export class UpdateAlbumDto {
   @Matches(DATE_KEY, { message: DATE_MESSAGE })
   endDate?: string;
 
-  /** `null` : on revient à la dernière photo de l'album. */
+  /** Clé d'une couverture envoyée via `POST /albums/:id/cover` ; `null` : la dernière photo. */
   @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsString()
-  coverUrl?: string | null;
+  coverKey?: string | null;
 }
 
 export class UpdateMemberDto {

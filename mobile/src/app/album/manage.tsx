@@ -18,6 +18,7 @@ import { PageLoader } from '@/components/page-loader';
 import { BackButton, HEADER_SCROLL_THRESHOLD, ScreenHeader } from '@/components/screen-header';
 import { TextField } from '@/components/text-field';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
+import { useExpiredUrlRetry } from '@/hooks/use-expired-url-retry';
 import { useAlbumQuery, useDeleteAlbum, useUpdateAlbum } from '@/queries/albums';
 import { pickSingleImage } from '@/services/photo-picker';
 import { canEditAlbum, getAlbumRange, ROLE_LABEL, toDateKey, type Album } from '@/types/album';
@@ -213,6 +214,7 @@ function DeleteAlbumLink({ album }: { album: Album }) {
 
 /** Photo de couverture : la dernière photo par défaut, ou une image choisie par le propriétaire. */
 function CoverSection({ album }: SectionProps) {
+  const retryExpired = useExpiredUrlRetry('albums');
   const update = useUpdateAlbum(album.id);
   const editable = canEditAlbum(album.myRole);
   const [busy, setBusy] = useState(false);
@@ -242,7 +244,8 @@ function CoverSection({ album }: SectionProps) {
         style={({ pressed }) => [styles.cover, pressed && styles.coverPressed]}>
         {album.coverUri ? (
           <Image
-            source={{ uri: album.coverUri }}
+            source={{ uri: album.coverUri, cacheKey: album.coverCacheKey ?? undefined }}
+            onError={retryExpired}
             contentFit="cover"
             transition={150}
             cachePolicy="memory-disk"

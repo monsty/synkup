@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 
 import { useAlbumQuery, useUploadPhoto } from '@/queries/albums';
 import { getGalleryPhotosBetween } from '@/services/gallery';
+import { DuplicatePhotoError } from '@/services/photo-upload';
 import { getDevicePhotos, markPhotoOnDevice } from '@/services/device-photos-store';
 import { getReviews, saveReview } from '@/services/review-store';
 import { getAlbumRange, type GalleryPhoto, type ReviewDecision } from '@/types/album';
@@ -74,20 +75,14 @@ export function useSwipeSession(albumId: string) {
   /** Envoie une photo de la galerie vers l'album. Résout à vrai si l'envoi a réussi. */
   const uploadOne = useCallback(async (albumId: string, photo: GalleryPhoto): Promise<boolean> => {
     try {
-      const uploaded = await uploadPhoto({
-        albumId,
-        input: {
-          localUri: photo.id,
-          width: photo.width,
-          height: photo.height,
-          takenAt: photo.creationTime,
-        },
-      });
+      const uploaded = await uploadPhoto({ albumId, photo });
       // Cette photo vient de la galerie de ce téléphone : ne jamais la retélécharger.
       markPhotoOnDevice(albumId, uploaded.id, photo.id);
       return true;
-    } catch {
-      // POC : on ignore l'échec. À gérer (retry / file d'attente) avec la vraie API.
+    } catch (error) {
+      // Déjà dans l'album (envoyée par quelqu'un d'autre, ou depuis un autre téléphone).
+      if (error instanceof DuplicatePhotoError) return true;
+      // TODO : file d'attente avec nouvelle tentative ; pour l'instant l'échec est perdu.
       return false;
     }
   }, [uploadPhoto]);

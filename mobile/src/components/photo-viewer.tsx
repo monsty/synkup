@@ -23,6 +23,7 @@ import {
   HEADER_ROW_PADDING_TOP,
 } from '@/components/screen-header';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
+import { useExpiredUrlRetry } from '@/hooks/use-expired-url-retry';
 import { formatPhotoDate, type AlbumPhoto } from '@/types/album';
 
 const HEADER_HEIGHT = HEADER_ROW_HEIGHT;
@@ -67,6 +68,7 @@ type Props = {
  * par ouverture.
  */
 export function PhotoViewer({ photos, initialIndex, onClose }: Props) {
+  const retryExpired = useExpiredUrlRetry('photos');
   const [index, setIndex] = useState(initialIndex);
   const [closing, setClosing] = useState(false);
   const overlayOpacity = useSharedValue(1);
@@ -282,6 +284,7 @@ export function PhotoViewer({ photos, initialIndex, onClose }: Props) {
                     style={[styles.card, { width: cardWidth, height: cardHeight }, cardStyle]}>
                     <Image
                       source={{ uri: photo.uri }}
+                      onError={retryExpired}
                       contentFit="cover"
                       transition={100}
                       cachePolicy="memory-disk"

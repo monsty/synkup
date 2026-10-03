@@ -42,8 +42,29 @@ production, une durée personnalisée demande Clerk Pro ; sinon la session est f
 | `DELETE` | `/albums/:id`                       | propriétaire  |
 | `PATCH`  | `/albums/:id/members/:memberId`     | propriétaire  |
 | `DELETE` | `/albums/:id/members/:memberId`     | propriétaire  |
+| `POST`   | `/albums/:id/cover`                 | propriétaire  |
+| `GET`    | `/albums/:id/photos`                | membre        |
+| `POST`   | `/albums/:id/photos/uploads`        | membre        |
+| `POST`   | `/albums/:id/photos`                | membre        |
+| `POST`   | `/albums/:id/photos/delete`         | auteur ou propriétaire |
 
 Un album dont on n'est pas membre répond 404, pour ne rien révéler.
+
+## Photos
+
+Les octets ne passent jamais par l'API. Le téléphone prépare trois versions (originale,
+affichage 1 600 px et miniature 480 px en JPEG), demande des URL d'envoi signées
+(`POST …/photos/uploads`, qui refuse tout de suite un doublon ou un album plein), envoie les
+fichiers au bucket, puis confirme (`POST …/photos`) : l'API vérifie que les trois objets
+existent et crée la photo. Rangement : `albums/<albumId>/photos/<photoId>/{original,display,thumb}`.
+
+Les URL de lecture sont signées à la date du début d'une tranche de 24 h et valables 48 h :
+identiques toute la journée, elles profitent du cache d'images de l'app, restent valables au
+moins 24 h après réception, et un lien qui fuite expire en 48 h au plus (limite S3 : 7 jours). Supprimer une
+photo ou un album efface aussi ses fichiers.
+
+Bucket B2 : privé, région EU, réglage « Keep only the last version » (sinon les fichiers
+supprimés restent facturés), clé d'application limitée au bucket.
 
 ## Structure
 
@@ -51,7 +72,8 @@ Un album dont on n'est pas membre répond 404, pour ne rien révéler.
 - `src/prisma` : client Prisma partagé.
 - `src/auth` : garde d'authentification (jeton Clerk) et décorateur `@User()`.
 - `src/users` : création des utilisateurs à partir de Clerk.
-- `src/albums` : albums et membres.
+- `src/albums` : albums, membres et photos.
+- `src/storage` : bucket S3 compatible (URL signées, suppression).
 
 Le client Prisma est généré dans `src/generated/prisma` (ignoré par git) : `npx prisma generate`.
 

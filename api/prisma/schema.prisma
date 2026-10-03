@@ -41,7 +41,8 @@ model Album {
   /// Bornes de la période, dates locales au format YYYY-MM-DD.
   startDate String
   endDate   String
-  coverUrl  String?
+  /// Couverture choisie à la main (clé dans le bucket) ; sinon la dernière photo.
+  coverKey  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -65,13 +66,21 @@ model AlbumMember {
 }
 
 /// Photo stockée dans le bucket ; l'API ne voit jamais les octets.
+/// Trois versions, préparées par le téléphone : miniature (grille), affichage (plein écran,
+/// couverture) et originale (téléchargement), sous `albums/<albumId>/photos/<id>/`.
 model Photo {
   id          String   @id @default(cuid())
   albumId     String
   authorId    String
-  /// Clé de l'objet dans le bucket.
+  /// Clé de l'originale dans le bucket.
   storageKey  String   @unique
-  /// Hash du fichier calculé côté téléphone : refuse les doublons avant l'envoi.
+  displayKey  String
+  thumbKey    String
+  /// Type MIME de l'originale (image/heic, image/jpeg…).
+  contentType String
+  /// Taille de l'originale, en octets.
+  byteSize    Int
+  /// Hash SHA-256 de l'originale, calculé côté téléphone : refuse les doublons avant l'envoi.
   contentHash String
   width       Int
   height      Int

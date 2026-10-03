@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/avatar-stack';
 import { Fonts, Palette, Radii, Spacing } from '@/constants/theme';
+import { useExpiredUrlRetry } from '@/hooks/use-expired-url-retry';
 import {
   describeAlbumStatus,
   formatAlbumRange,
@@ -31,6 +32,7 @@ type Props = {
  * puis le nom, la période, et les membres en avatars chevauchés.
  */
 export function AlbumCard({ album, onPress }: Props) {
+  const retryExpired = useExpiredUrlRetry('albums');
   const status = getAlbumStatus(album);
   const people = album.members.length;
 
@@ -43,7 +45,8 @@ export function AlbumCard({ album, onPress }: Props) {
       <View style={styles.cover}>
         {album.coverUri ? (
           <Image
-            source={{ uri: album.coverUri }}
+            source={{ uri: album.coverUri, cacheKey: album.coverCacheKey ?? undefined }}
+            onError={retryExpired}
             contentFit="cover"
             transition={150}
             cachePolicy="memory-disk"

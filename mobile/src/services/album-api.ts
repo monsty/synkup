@@ -1,19 +1,16 @@
 /**
  * Appels à l'API des albums (`api/`). Pas d'état ici : le cache et les rechargements sont
  * gérés par TanStack Query (`src/queries/albums.ts`).
- *
- * Transition : les photos ne sont pas encore stockées côté serveur (le bucket viendra ensuite).
- * Celles envoyées depuis le téléphone restent en mémoire, rattachées à leur album, et sont
- * fusionnées dans le compteur et la couverture renvoyés par l'API.
  */
-import { apiRequest, ApiError } from '@/services/api-client';
-import { getCurrentUserId } from '@/services/auth-api';
+import { ApiError, apiRequest } from '@/services/api-client';
+import { uploadCover, uploadGalleryPhoto } from '@/services/photo-upload';
 import {
   getAlbumRange,
   getAlbumStatus,
   type Album,
   type AlbumPhoto,
   type AlbumRole,
+  type GalleryPhoto,
 } from '@/types/album';
 
 /** Album tel que renvoyé par l'API. */
@@ -28,37 +25,35 @@ type AlbumDto = Omit<Album, 'coverUri' | 'members'> & {
   }[];
 };
 
-/** Photos envoyées depuis ce téléphone, par album, triées par date décroissante. */
-const localPhotos = new Map<string, AlbumPhoto[]>();
-
-function photosOf(albumId: string): AlbumPhoto[] {
-  return localPhotos.get(albumId) ?? [];
-}
-
-function sortByDateDesc(photos: AlbumPhoto[]): AlbumPhoto[] {
-  return [...photos].sort((a, b) => b.takenAt.localeCompare(a.takenAt));
-}
+type PhotoDto = Omit<AlbumPhoto, 'uri' | 'thumbUri' | 'originalUri'> & {
+  displayUrl: string;
+  thumbUrl: string;
+  originalUrl: string;
+};
 
 function toAlbum(dto: AlbumDto): Album {
-  const local = photosOf(dto.id);
-  const me = getCurrentUserId();
   return {
     id: dto.id,
     name: dto.name,
     startDate: dto.startDate,
     endDate: dto.endDate,
-    coverUri: dto.hasCustomCover ? dto.coverUrl : (local[0]?.uri ?? dto.coverUrl),
+    coverUri: dto.coverUrl,
+    coverCacheKey: dto.coverCacheKey,
     hasCustomCover: dto.hasCustomCover,
-    photoCount: dto.photoCount + local.length,
+    photoCount: dto.photoCount,
     myRole: dto.myRole,
     members: dto.members.map((m) => ({
       id: m.id,
       name: m.name,
       avatarUri: m.avatarUrl,
       role: m.role,
-      photoCount: m.photoCount + (m.id === me ? local.length : 0),
+      photoCount: m.photoCount,
     })),
   };
+}
+
+function toPhoto({ displayUrl, thumbUrl, originalUrl, ...dto }: PhotoDto): AlbumPhoto {
+  return { ...dto, uri: displayUrl, thumbUri: thumbUrl, originalUri: originalUrl };
 }
 
 export type CreateAlbumInput = {
@@ -68,7 +63,7 @@ export type CreateAlbumInput = {
 };
 
 export type UpdateAlbumInput = Partial<CreateAlbumInput> & {
-  /** `null` pour revenir à la dernière photo de l'album. */
+  /** Image locale choisie comme couverture ; `null` pour revenir à la dernière photo. */
   coverUri?: string | null;
 };
 
@@ -89,13 +84,6 @@ function sortAlbums(albums: Album[]): Album[] {
     return ra.start.getTime() - rb.start.getTime();
   });
 }
-
-export type UploadPhotoInput = {
-  localUri: string;
-  width: number | null;
-  height: number | null;
-  takenAt: number | null;
-};
 
 export const albumApi = {
   /** Albums de l'utilisateur : en cours d'abord, puis à venir, puis terminés du plus récent. */
@@ -120,27 +108,21 @@ export const albumApi = {
   },
 
   async getPhotos(albumId: string): Promise<AlbumPhoto[]> {
-    return photosOf(albumId);
+    const photos = await apiRequest<PhotoDto[]>('GET', `/albums/${albumId}/photos`);
+    return photos.map(toPhoto);
   },
 
-  /** Transition : la photo reste sur le téléphone, en attendant le stockage côté serveur. */
-  async uploadPhoto(albumId: string, input: UploadPhotoInput): Promise<AlbumPhoto> {
-    const photo: AlbumPhoto = {
-      id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      uri: input.localUri,
-      width: input.width ?? 1000,
-      height: input.height ?? 1000,
-      takenAt: new Date(input.takenAt ?? Date.now()).toISOString(),
-      authorName: 'Moi',
-    };
-    localPhotos.set(albumId, sortByDateDesc([photo, ...photosOf(albumId)]));
-    return photo;
+  /** Envoie une photo de la galerie ; `DuplicatePhotoError` si elle est déjà dans l'album. */
+  async uploadPhoto(albumId: string, photo: GalleryPhoto): Promise<{ id: string }> {
+    return uploadGalleryPhoto(albumId, photo);
   },
 
   /** Nom, période ou couverture : le serveur refuse si je ne suis pas propriétaire. */
   async updateAlbum(albumId: string, input: UpdateAlbumInput): Promise<Album> {
     const { coverUri, ...rest } = input;
-    const body = coverUri === undefined ? rest : { ...rest, coverUrl: coverUri };
+    // Une nouvelle couverture est d'abord envoyée au stockage ; l'album retient sa clé.
+    const coverKey = coverUri ? await uploadCover(albumId, coverUri) : coverUri;
+    const body = coverKey === undefined ? rest : { ...rest, coverKey };
     return toAlbum(await apiRequest<AlbumDto>('PATCH', `/albums/${albumId}`, body));
   },
 
@@ -160,15 +142,10 @@ export const albumApi = {
   /** Supprime un album et toutes ses photos (propriétaire). Libère le quota. */
   async deleteAlbum(albumId: string): Promise<void> {
     await apiRequest<void>('DELETE', `/albums/${albumId}`);
-    localPhotos.delete(albumId);
   },
 
-  /** Supprime des photos de l'album. Transition : photos locales seulement. */
+  /** Supprime des photos : les siennes, ou toutes pour le propriétaire. */
   async deletePhotos(albumId: string, photoIds: string[]): Promise<void> {
-    const ids = new Set(photoIds);
-    localPhotos.set(
-      albumId,
-      photosOf(albumId).filter((p) => !ids.has(p.id))
-    );
+    await apiRequest<void>('POST', `/albums/${albumId}/photos/delete`, { ids: photoIds });
   },
 };
